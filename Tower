@@ -1,0 +1,289 @@
+repeat wait(2.5) until game.Players.LocalPlayer and game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("spawn_units")
+repeat wait(2) until game.Players.LocalPlayer:FindFirstChild("_stats")
+
+local FolderPath = "CustomerData"
+local SettingsPath = "CustomerSettings"
+
+local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
+local Webhook = nil
+local ThumbnailURL = nil
+
+local DiscordID = nil
+local MaxTower = nil
+local OldTower = nil
+local IsSended = false
+
+local WhiteScreen = false
+
+function GetNumberFromString(S)
+    return string.match(S,"%d+")
+end
+
+
+local y2z = tonumber(GetNumberFromString(game:GetService("Players").LocalPlayer.PlayerGui.InfiniteTowerUI.LevelSelect.InfoFrame.LevelTitle.Text))
+
+if not (isfolder(FolderPath)) then
+    makefolder(FolderPath)
+end
+if not (isfolder(SettingsPath)) then
+    makefolder(SettingsPath)
+end
+if not (isfile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json")) then
+    writefile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json", game.HttpService:JSONEncode({
+        ["White Screen"] = false
+    }))
+end
+
+local ThumbnailRequest = http.request(
+    {
+        Url = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..tostring(game.Players.LocalPlayer.UserId).."&size=420x420&format=Png&isCircular=false",
+        Method = "GET",
+        Headers = {
+            ["Content-Type"] = "application/json"
+        },
+    }
+)
+ThumbnailURL = (game:GetService("HttpService"):JSONDecode(ThumbnailRequest.Body))["data"][1]["imageUrl"]
+--print(ThumbnailURL)
+
+if isfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json") then    
+    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json"))    
+    OldTower = data["Old Tower"]
+    MaxTower = data["Max Tower"] 
+    Webhook = data["Webhook"]
+    DiscordID = data["Discord ID"]
+    IsSended = data["Is Sended"]
+
+end
+if isfile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json") then    
+    local data = game.HttpService:JSONDecode(readfile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json")) 
+    WhiteScreen = data["White Screen"]
+end
+    if Webhook and WebhookEnd then
+            if game.PlaceId == 8304191830 then
+                -- // Claim Gift \\ --
+                game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_daily_reward:InvokeServer()
+                game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_christmas_calendar_reward:InvokeServer()
+   
+                -- // Send Webhook When Guns Reach The Max \\ --
+                if  y2z >= tonumber(GetNumberFromString(MaxTower)) and IsSended == false then
+                    IsSended = true
+                    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json"))    
+                    data["Is Sended"] = true
+                    writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json", game.HttpService:JSONEncode(data))
+
+                    local descriptionend = "**𝐍𝐀𝐌𝐄** : ||%s||\n**🏆・𝐓𝐨𝐰𝐞𝐫 : %s**\n**<:Ammo:1094340500867252244>・BattlePass LV : %s**\n**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・%s**\n\n```- ฟาร์มครบแล้ว อยากเล่นเลยให้เปลี่ยนรหัสผ่านนะ 💕\n- ถ้าไม่เปลี่ยนรหัสผ่านก็จะลงเรื่อยๆจนลงไม่ไหวเลย ✨```\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"
+                    http.request(
+                        {
+                            Url = WebhookEnd,
+                            Method = "POST",
+                            Headers = {
+                                ["Content-Type"] = "application/json"
+                            },
+                            Body = game:GetService("HttpService"):JSONEncode(
+                                {
+                                    ["content"] = "<@"..tostring(DiscordID).."> <@&1006505817769521177>",
+                                    ["embeds"] = {
+                                        {
+                                            ["title"] = "**ฟาร์มเสร็จแล้วเปลี่ยนรหัสผ่านได้เลย <a:6157gawrgurapopcorn:1019689697590648973>**",
+                                            ["description"] = string.format(
+                                                descriptionend,
+                                                game.Players.LocalPlayer.Name,
+                                                tonumber(GetNumberFromString(game:GetService("Players").LocalPlayer.PlayerGui.InfiniteTowerUI.LevelSelect.InfoFrame.LevelTitle.Text)).." / "..tostring(MaxTower),
+                                                tostring(game:GetService("Players").LocalPlayer.PlayerGui.BattlePass.Main.Level.V.Text),
+                                                tostring(game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text)                                                             
+                                            ),
+                                            ["type"] = "rich",   
+                                            ["color"] = tonumber(0xd87e2a),
+                                            ["footer"] = {
+                                                ["text"] = "PLaNS SHOP ",
+                                                ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                            },
+                                            ["thumbnail"] = {
+                                                ["url"] = ThumbnailURL
+                                            },
+                                            ["image"] = {
+                                                ["url"] = "https://media.discordapp.net/attachments/1040229055498301511/1063251821998653621/giphy_1.gif"
+                                            },
+                                            ["timestamp"] = DateTime.now():ToIsoDate(),
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    )
+                end
+
+
+                local description = "🏆**・𝐓𝐨𝐰𝐞𝐫 : %s**\n"
+                --[[for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "capsule") and string.find(string.lower(v.Name), "csm_pity") then
+                        description = description..("<:Screenshot20230207233258:1072555886612070521> แคปซูล  : "..v.OwnedAmount.Text.."\n")
+                    end               
+                end]]           
+                local ResultValue = {
+                    ["Tower"] = tonumber(GetNumberFromString(game:GetService("Players").LocalPlayer.PlayerGui.InfiniteTowerUI.LevelSelect.InfoFrame.LevelTitle.Text)),                   
+                }                                                          
+                http.request(
+                    {
+                        Url = Webhook,
+                        Method = "POST",
+                        Headers = {
+                            ["Content-Type"] = "application/json"
+                        },
+                        Body = game:GetService("HttpService"):JSONEncode(
+                            {
+                                ["content"] = "",
+                                ["embeds"] = {
+                                    {
+                                        --["title"] = "**✨ PLaNS SHOP ✨**",
+                                        ["description"] = string.format(
+                                            description,                                            
+                                            ResultValue["Tower"].." / "..MaxTower                                                          
+                                        ),
+                                        ["type"] = "rich",   
+                                        ["color"] = tonumber(0xFF1493),
+                                        ["footer"] = {
+                                            ["text"] = "PLaNS SHOP ",
+                                            ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                        },
+                                        ["thumbnail"] = {
+                                            ["url"] = ""
+                                        },                      
+                                        ["timestamp"] = DateTime.now():ToIsoDate(),
+                                    }
+                                }
+                            }
+                        )
+                    }
+                )              
+    elseif game.PlaceId == 8349889591 then
+        -- // Send Webhook When Gems Reach The Max \\ --
+        if y2z >= tonumber(GetNumberFromString(MaxTower)) and IsSended == false then
+            --print("gem reach")
+            IsSended = true
+            local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json"))    
+            data["Is Sended"] = true
+            writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json", game.HttpService:JSONEncode(data))
+
+            local descriptionend = "**𝐍𝐀𝐌𝐄** : ||%s||\n**🏆・𝐓𝐨𝐰𝐞𝐫 : %s**\n**<:Ammo:1094340500867252244>・BattlePass LV : %s**\n**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・%s**\n\n```- ฟาร์มครบแล้ว อยากเล่นเลยให้เปลี่ยนรหัสผ่านนะ 💕\n- ถ้าไม่เปลี่ยนรหัสผ่านก็จะลงเรื่อยๆจนลงไม่ไหวเลย ✨```\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"
+            http.request(
+                {
+                    Url = WebhookEnd,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json"
+                    },
+                    Body = game:GetService("HttpService"):JSONEncode(
+                        {
+                            ["content"] = "<@"..tostring(DiscordID).."> <@&1006505817769521177>",
+                            ["embeds"] = {
+                                {
+                                    ["title"] = "**ฟาร์มเสร็จแล้วเปลี่ยนรหัสผ่านได้เลย <a:6157gawrgurapopcorn:1019689697590648973>**",
+                                    ["description"] = string.format(
+                                        descriptionend,
+                                        game.Players.LocalPlayer.Name,
+                                        tonumber(GetNumberFromString(game:GetService("Players").LocalPlayer.PlayerGui.InfiniteTowerUI.LevelSelect.InfoFrame.LevelTitle.Text)).." / "..tostring(MaxTower),
+                                        tostring(game:GetService("Players").LocalPlayer.PlayerGui.BattlePass.Main.Level.V.Text),
+                                        tostring(game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text)
+                                    ),
+                                    ["type"] = "rich",   
+                                    ["color"] = tonumber(0xd87e2a),
+                                    ["footer"] = {
+                                        ["text"] = "PLaNS SHOP ",
+                                        ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                    },
+                                    ["thumbnail"] = {
+                                        ["url"] = ThumbnailURL
+                                    },
+                                    ["image"] = {
+                                        ["url"] = "https://media.discordapp.net/attachments/1040229055498301511/1063251821998653621/giphy_1.gif"
+                                    },
+                                    ["timestamp"] = DateTime.now():ToIsoDate(),
+                                }
+                            }
+                        }
+                    )
+                }
+            )
+        end       
+    end
+end
+
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI"))()
+local Window = Library:CreateWindow({
+    Title = "PLaNS x SHOP",
+    Center = true, 
+    AutoShow = _G.ShowMyUI,
+})
+
+local Tabs = Window:AddTab('PLaNS x SHOP')
+local GroupBox = Tabs:AddLeftGroupbox('Settings')
+
+local whitescreen = GroupBox:AddToggle('White Screen', {
+    Text = 'Toggle White Screen',
+    Default = WhiteScreen,
+})
+whitescreen:OnChanged(function(value)
+    WhiteScreen = value
+    writefile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json", game.HttpService:JSONEncode({
+        ["White Screen"] = WhiteScreen
+    }))
+    if value == true then
+        game:GetService("RunService"):Set3dRenderingEnabled(false)
+    else
+        game:GetService("RunService"):Set3dRenderingEnabled(true)
+    end
+end)
+
+
+local wh = GroupBox:AddInput('Webhook', {
+    Numeric = false,
+    Finished = false,
+    Text = 'Webhook',
+    Placeholder = 'Webhook Here!',
+})
+
+local mg = GroupBox:AddInput('Max Tower', {
+    Numeric = true, 
+    Finished = false, 
+    Text = 'Max Tower',
+    Placeholder = 'Max Tower Here!',
+})
+
+local di = GroupBox:AddInput('Discord ID', {
+    Numeric = false, 
+    Finished = false, 
+    Text = 'Discord ID',
+    Placeholder = 'Discord ID Here!',
+})
+
+if isfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json") then 
+    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json"))
+    wh:SetValue(data["Webhook"])
+    mg:SetValue(data["Max Tower"])
+    di:SetValue(data["Discord ID"])
+
+    if MaxTower then
+        mg:SetValue(data["Max Tower"])
+    end
+end
+
+GroupBox:AddButton('Save Settings', function()
+    if isfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json") then 
+        local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json"))    
+        data["Max Tower"] = mg.Value 
+        data["Webhook"] = wh.Value
+        data["Discord ID"] = di.Value
+        data["Is Sended"] = false
+        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json", game.HttpService:JSONEncode(data))
+    else
+        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name.."_Tw.json", game.HttpService:JSONEncode({
+            ["Webhook"] = wh.Value,
+            ["Max Tower"] = mg.Value,
+            ["Discord ID"] = di.Value,
+            ["Is Sended"] = false,
+            ["Old Tower"] = false,
+        }))
+    end
+end)
