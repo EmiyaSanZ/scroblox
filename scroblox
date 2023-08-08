@@ -1,3 +1,4 @@
+_G.ShowMyUI = false
 _G.ShowSeaHubUI = true
 _G.Webhook = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 _G.AdminRoleID = "1006505817769521177"
@@ -1597,21 +1598,18 @@ if http then
                     spawn(function()
                         repeat wait(1) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
                         if CurrentSettings["Config"]["Webhook"]["Send When Round Ended"] then
-                            local RoundEndedDescription = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level : %s```\n```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficulty: %s\n- Waves : %s | %s ```\n```md\n#Enemies Killed\n- %d Enemies\n- %.2f DMG```\n"
-                             
-
+                            local RoundEndedDescription = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level : %s```\n```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficulty: %s\n- Waves : %s | %s ```\n```md\n#Enemies Killed\n- %d Enemies\n- %.2f DMG```\n"                       
                             repeat
                                 spawn(function()
-                                    for i,v in pairs(getconnections(PlayerGui.ResultsUI.Holder.Buttons.Next.Activated)) do
+                                    for i,v in pairs(getconnections(game:GetService("Workspace")["_DATA"].GameFinished.Value == true)) do
                                         v:Fire()
                                     end
                                 end)              
                             wait(0.5)              
                             until string.find(PlayerGui.HatchInfo.holder.info1.UnitName.Text, "x")
-                            
                             RoundEndedDescription = string.format(RoundEndedDescription, Player.Name, GemPath.Value , GoldPath.Value , GetCurrentLevel(), InfoGameEnd.Text, TitlePath.Text.." | "..DescriptionPath.Text, DifficultyPath.Text, GetNumberFromString(WaveCompleted.Text), TimeCompleted.Text, KillsInGame.Value, DMGsInGane.Value)
                             RoundEndedDescription = RoundEndedDescription..("```md\n#Rewards\n")
-
+                           
                             local XPAmount = tonumber(GetNumberFromString(PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text))
                             local GemAmount = tonumber(GetNumberFromString(PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text))
                             
