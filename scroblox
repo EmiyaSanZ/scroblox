@@ -1638,7 +1638,7 @@ if http then
                 pcall(function()
                     game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_daily_reward:InvokeServer()
                     game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_christmas_calendar_reward:InvokeServer()
-                    game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_battlepass_rewards:InvokeServer()
+                    --game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_battlepass_rewards:InvokeServer()
                 end)
             end
         end
