@@ -1577,7 +1577,7 @@ if http then
             end   
                                            
                         
-                        local LobbyEmbedDescription2 = "**Username:** ||%s||\n<a:emoji_98_jk:1054831096929452042> แจ้งเตือนสถานะ <a:8699rightrainbowstar:1054740408434966588>\n<a:reder:1054831728419672144> เล่นจบแล้วตอนนี้อยู่ในล็อบบี้ (ห้ามเข้ารหัสตอนนี้) <a:aHamsterRougeBoule:1054831885706084393>\n"
+               --[[         local LobbyEmbedDescription2 = "**Username:** ||%s||\n<a:emoji_98_jk:1054831096929452042> แจ้งเตือนสถานะ <a:8699rightrainbowstar:1054740408434966588>\n<a:reder:1054831728419672144> เล่นจบแล้วตอนนี้อยู่ในล็อบบี้ (ห้ามเข้ารหัสตอนนี้) <a:aHamsterRougeBoule:1054831885706084393>\n"
                         LobbyEmbedDescription2 = string.format(LobbyEmbedDescription2, Player.Name)
                         SendWebhook(CurrentWebhook, " ", {
                             ["title"] = "**✨ PLaNS SHOP ✨**",
@@ -1593,7 +1593,7 @@ if http then
                         ["title"] = "**✨ PLaNS SHOP ✨**",
                         ["description"] = InRoundEmbedDescription,
                         ["color"] = EmbedColor["Green"],
-                    })
+                    })]]--
                     spawn(function()
                         repeat wait(5) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
                         if CurrentSettings["Config"]["Webhook"]["Send When Round Ended"] then
