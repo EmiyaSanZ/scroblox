@@ -1652,7 +1652,7 @@ if http then
                                 TimeCompleted.Text,
                                 KillsInGame.Value
                             )                             
-                            wait(7)
+                            wait(6)
                             local RoundEndedDescription = playerInfo .. portalInfo .. starInfo .. miscInfo .. gameInfo
                             --[[RoundEndedDescription = string.format(RoundEndedDescription, 
                                                                     Player.Name, 
