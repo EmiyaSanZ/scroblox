@@ -1606,7 +1606,7 @@ if http then
                         ["color"] = EmbedColor["Green"],
                     })
                     spawn(function()
-                        repeat wait(9) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
+                        repeat wait(5) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
                         if CurrentSettings["Config"]["Webhook"]["Send When Round Ended"] then                      
                             local filename = "PLANSWEBHOOK/"..tostring(game.Players.LocalPlayer.Name).."_Webhook.json"                       
                             local json_data = readfile(filename)
@@ -1652,7 +1652,7 @@ if http then
                                 TimeCompleted.Text,
                                 KillsInGame.Value
                             )                             
-                            wait(6)
+                            wait(3)
                             local RoundEndedDescription = playerInfo .. portalInfo .. starInfo .. miscInfo .. gameInfo
                             --[[RoundEndedDescription = string.format(RoundEndedDescription, 
                                                                     Player.Name, 
