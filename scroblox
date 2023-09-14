@@ -1,4 +1,3 @@
-_G.ShowMyUI = true
 _G.ShowSeaHubUI = true
 _G.Webhook = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 _G.AdminRoleID = "1006505817769521177"
@@ -1645,7 +1644,7 @@ if http then
                                 ResultValue["OtherItems"]["SummonTicket"],                                                        
                                 ResultValue["Rikugan Eye"]            
                             )
-                            wait(1)
+                            wait(6)
                             repeat wait(1) until WaveCompleted.Text ~= "999" and TimeCompleted.Text ~= "22:55"
                             local gameInfo = string.format(
                                 "**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s\n⏳**・**%s\n👻**・**Kill %d Enemies\n",
