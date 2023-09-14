@@ -1644,6 +1644,7 @@ if http then
                                 ResultValue["OtherItems"]["SummonTicket"],                                                        
                                 ResultValue["Rikugan Eye"]            
                             )
+                            wait(5)
                             local gameInfo = string.format(
                                 "**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s\n⏳**・**%s\n👻**・**Kill %d Enemies\n",
                                 TitlePath.Text.." | "..DescriptionPath.Text,
