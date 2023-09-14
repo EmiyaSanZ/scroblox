@@ -69,7 +69,7 @@ if http then
             ["six_eyes"] = "<:Rikugan_Eye:1042744849532723210>",
         }
         
-         function GetNumberFromString(S)
+        function GetNumberFromString(S)
             return string.match(S,"%d+")
         end
         -- // In Game Var \\ --
@@ -1307,7 +1307,7 @@ if http then
             else
                 local ThumbnailRequest = http.request(
                     {
-                        Url = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..tostring(UID).."&size=420x420&format=Png&isCircular=false",
+                        Url = "https://thumbnails.roblox.com/v1/users/avatar?userIds="..tostring(UID).."&size=720x720&format=Png&isCircular=false",
                         Method = "GET",
                         Headers = {
                             ["Content-Type"] = "application/json"
@@ -1324,9 +1324,10 @@ if http then
             local ThumbnailURL = GetThumbnailURL(Player.UserId)
             repeat task.wait() until ThumbnailURL
             Embed["footer"] = {["text"] = FolderName, ["icon_url"] = IconURL}        
-            Embed["thumbnail"] = {["url"] = ThumbnailURL}
+            Embed["image"] = {["url"] = ThumbnailURL}
             Embed["timestamp"] = DateTime.now():ToIsoDate()
             Embed["type"] = "rich"
+            --Embed["thumbnail"] = {["url"] = ThumbnailURL}
 
             http.request(
                 {
@@ -1365,14 +1366,36 @@ if http then
                 }
             )
         end
+        function SendWebhook3(Webhook, Content, Embed)      
+            Embed["type"] = "rich"
+
+            http.request(
+                {
+                    Url = Webhook,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json"
+                    },
+                    Body = game:GetService("HttpService"):JSONEncode(
+                        {
+                            ["content"] = Content,
+                            ["embeds"] = {Embed}
+                        }
+                    )
+                }
+            )
+        end
         function CheckCurrency(CurrentWebhook, RoundEndedDescription)
             RoundEndedDescription = RoundEndedDescription.."\n"
             local MaxGem = CurrentSettings["Game Identifier"]["Webhook"]["Max Gem"]
             local CurrentMode = GetCurrentMode()
+            local filename = "PLANSWEBHOOK/"..tostring(game.Players.LocalPlayer.Name).."_Webhook.json"
+            local json_data = readfile(filename)
+            local ResultValue = HttpService:JSONDecode(json_data)
 
-            local FinishedFarmEmbedDescription = "**𝐍𝐀𝐌𝐄 :** ||%s||\n**<:Gems:1058285006755209267>・𝐆𝐄𝐌𝐒 : %s**\n**<a:2891bitcoin:1021469261274824764>・𝐆𝐎𝐋𝐃 : %s**\n**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・𝐋𝐞𝐯𝐞𝐥 : %s**\n\n```md\n#แมพที่ฟาร์ม\n- Map : %s```\nอย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"       
+            local FinishedFarmEmbedDescription = "**𝐍𝐀𝐌𝐄 :** ||%s||\n**<:Gems:1058285006755209267>・𝐆𝐄𝐌𝐒 : %s**\n**<a:2891bitcoin:1021469261274824764>・𝐆𝐎𝐋𝐃 : %s**\n**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・𝐋𝐞𝐯𝐞𝐥 : %s**\n🍰**・𝗕𝗮𝘁𝘁𝗹𝗲𝗣𝗮𝘀𝘀 𝗟𝗲𝘃𝗲𝗹 : %s [%s]**\n\n```md\n#แมพที่ฟาร์ม\n- Map : %s```\nอย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"       
             local FinishedFarmContent = "<@%s> <@&%s>"
-            FinishedFarmEmbedDescription = string.format(FinishedFarmEmbedDescription, Player.Name, GemPath.Value, GoldPath.Value, GetCurrentLevel(), TitlePath.Text)
+            FinishedFarmEmbedDescription = string.format(FinishedFarmEmbedDescription, Player.Name, GemPath.Value, GoldPath.Value, GetCurrentLevel(), ResultValue["LVBP"], ResultValue["LVBP2"], TitlePath.Text)
             FinishedFarmContent = string.format(FinishedFarmContent, CurrentSettings["Config"]["Webhook"]["ID"], _G.AdminRoleID)
             local FinishedFarmEmbed = {
                 ["title"] = "**ฟามเสร็จแล้วเปลี่ยนรหัสได้เลย!**",
@@ -1394,7 +1417,7 @@ if http then
                 end
                 RoundEndedDescription = RoundEndedDescription..("```md\n- เหลือฟาร์มอีก "..tostring(CurrentSettings["Game Identifier"]["Webhook"]["Max Gem"]).." เพชร 💎```")
             end
-            SendWebhook22(CurrentWebhook, " ", {
+            SendWebhook(CurrentWebhook, " ", {
                 ["title"] = "**✨ PLaNS SHOP ✨**",
                 ["description"] = RoundEndedDescription,
                 ["color"] = EmbedColor["PPc"],
@@ -1405,159 +1428,134 @@ if http then
             local CurrentWebhook = CurrentSettings["Config"]["Webhook"]["URL"]
             if string.find(CurrentWebhook, "api/webhooks") then        
                 if IsLobby() then
-                   if CurrentSettings["Config"]["Webhook"]["Send When Return To Lobby"] then
+                if CurrentSettings["Config"]["Webhook"]["Send When Return To Lobby"] then
                         
             if CurrentSettings["Config"]["Webhook"]["Send When Return To Lobby"] then     
-                local description = " ———————————————\n**ข้อมูลผู้เล่น** ≧▽≦ <a:3018pinkheart:1019689700224684122>\n\n**Name : **||%s||\n<:Gems:1058285006755209267> **Gems : ** **%s**\n<:Gold:1058285013243805867> **Golds : %s**\n<a:5622bloodpotion:1047140829703180298> **%s**\n<:Ammo:1094340500867252244> **BattlePass Level :** %s\n<:Trophies:1094449191981416508> **%s **\n———————————————\n**EXP จากด่าน** <:4026pridepotion:1047140826897203311>"
-                
+                local description = "**● `ข้อมูลผู้เล่น`** <a:3018pinkheart:1019689700224684122>\n**Name : **||%s||\n<:Gems:1058285006755209267>・Gems : %s\n<:Gold:1058285013243805867>・Golds : %s\n<a:5622bloodpotion:1047140829703180298>・%s\n<:Ammo:1094340500867252244>・BattlePass Level : %s [%s]\n<:Trophies:1094449191981416508>・%s\n"
+                local HttpService = game:GetService("HttpService")
+                -- สร้างตารางที่จะเก็บข้อมูล
                 local ResultValue = {
                     ["Gem"] = game.Players.LocalPlayer["_stats"]["gem_amount"].Value,
                     ["Gold"] = game.Players.LocalPlayer["_stats"]["gold_amount"].Value,
                     ["Level"] = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text,
                     ["LVBP"] = Player.PlayerGui.BattlePass.Main.Level.V.Text,
+                    ["LVBP2"] = Player.PlayerGui.BattlePass.Main.FurthestRoom.V.Text,
                     ["Tower Room"] = game:GetService("Players").LocalPlayer.PlayerGui.InfiniteTowerUI.LevelSelect.InfoFrame.LevelTitle.Text,
-                    ["clover stone"] = "0x" ,
-                    ["star"] = "0x" ,                    
-                    ["Rikugan Eye"] = "0x",
+                    ["star"] = "x0" ,                    
+                    ["Rikugan Eye"] = "x0",
+                    ["StarFruits"] = {
+                        ["Rainbow"] = 0,
+                        ["Blue"] = 0,
+                        ["Red"] = 0,
+                        ["Pink"] = 0,
+                        ["Green"] = 0,
+                    },
+                    ["OtherItems"] = {
+                        ["StarRemnant"] = "x0",
+                        ["LuckPotion"] = "x0",
+                        ["SummonTicket"] = "x0",
+                    },
+                    ["Portals"] = {
+                        ["Boros"] = 0,
+                        ["Zeldris"] = 0,
+                        ["Summer"] = 0,
+                        ["ItemEclipse"] = 0,
+                    }
                 }
+                -- แปลงตารางเป็นสตริง JSON
+                local json_data = HttpService:JSONEncode(ResultValue)
+                if not isfolder("PLANSWEBHOOK") then
+                    makefolder("PLANSWEBHOOK")
+                end
+                local filename = "PLANSWEBHOOK/"..tostring(game.Players.LocalPlayer.Name).."_Webhook.json"
+                writefile(filename, json_data)
+                -- อ่านข้อมูลจากไฟล์ JSON
+                local json_data = readfile(filename)
+                -- แปลงสตริง JSON เป็นตาราง Lua
+                local ResultValue = HttpService:JSONDecode(json_data)
 
-                
-                description = description.."\n"
+                description = description.."\n**● `Portal ประตูลับ`** <a:HGWS_87:1054831644781051974>\n"
                 for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "senzu") and string.find(string.lower(v.Name), "bean") then
-                        description = description..("<:Senzu_Bean:1042741743612862465>**・**ถั่วเขียว  : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "aot") and string.find(string.lower(v.Name), "fluid") then
-                        description = description..("<:Mysterious_Fluid:1042741739808636928>**・**ไขสันหลังไททัน : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "wisteria") and string.find(string.lower(v.Name), "flower") then
-                        description = description..("<:Wisteria_Flower:1042741748922843136>**・**ดอกฟูจิ : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "ramen") and string.find(string.lower(v.Name), "xp") then
-                        description = description..("<:Ramen_Bowl:1042741742002257931>**・**ราเม็ง : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "xp_devil") and string.find(string.lower(v.Name), "fruit") then
-                        description = description..("<:Devil_Fruit:1042741732388917288>**・**ผลปีศาจ : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "coffee") then
-                        description = description..("☕️**・**กาแฟ : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "soul") and string.find(string.lower(v.Name), "candy") then
-                        description = description..("<:Soul_Candy:1042741746980900894>**・**ลูกกวาดวิญญาณ : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "hxh") and string.find(string.lower(v.Name), "fish") then
-                        description = description..("<:Cooked_Fish:1042741727632568340>**・**ปลาย่าง : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fairy") and string.find(string.lower(v.Name), "exp") then
-                        description = description..("<:Magical_Artifact:1042741736998453310>**・**แฟรี่ : "..v.OwnedAmount.Text.."\n")
-                    end 
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "jjk") and string.find(string.lower(v.Name), "talisman") then
-                        description = description..("<:Curse_Talisman:1042741729654218783>**・**ผ้ายันต์ : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "jojo") and string.find(string.lower(v.Name), "pendant") then
-                        description = description..("<:Stone_Pendant:1075383093738864671>**・**สร้อยโจโจ้ : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "opm") and string.find(string.lower(v.Name), "core") then
-                        description = description..("<:Alien_Core:1075383091440390225>**・**คอร์เอเลี่ยน : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find((v.Name), "quirk_shard") then
-                        description = description..("<:Quirk_Shard:1094449189552918708>**・**เศษเสี้ยว : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find((v.Name), "7ds_pie") then
-                        description = description..("<:7ds_Pie:1094452930607841340>**・**พาย : "..v.OwnedAmount.Text.."\n")
-                    end       
-                end 
-                description = description.."<:Magic_Stone:1042741693755170847>**・**หินสีฟ้า(EXP) : %s\n"
-            
-                description = description.."———————————————\n**Raid item**  <:Awakened_Triple_Tomoe:1094459826995740672>\n"
-                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
-                    if v:IsA("ImageButton") and string.find((v.Name), "uchiha_") and string.find(string.lower(v.Name), "item") then
-                        description = description..("<:Tomoe:1094340509851455569>**・**tomoe  : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find((v.Name), "west_city_frieza_item") then
-                        description = description..("<:scouter:1088731891680682094>**・**Alien Scouter : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find((v.Name), "relic_shard") then
-                        description = description..("<:Relic_Shard:1094340507838189719>**・**relic shard : "..v.OwnedAmount.Text.."\n")
+                    if v:IsA("ImageButton") then
+                        local lowerCaseName = string.lower(v.Name)
+                        
+                        if string.find(lowerCaseName, "portal_boros") and string.find(lowerCaseName, "g") then
+                            ResultValue["Portals"]["Boros"] = GetNumberFromString(ResultValue["Portals"]["Boros"]) + (GetNumberFromString(v.OwnedAmount.Text))                        
+                        elseif string.find(lowerCaseName, "portal_zeldris") then
+                            ResultValue["Portals"]["Zeldris"] = GetNumberFromString(ResultValue["Portals"]["Zeldris"]) + (GetNumberFromString(v.OwnedAmount.Text))
+                        elseif string.find(lowerCaseName, "portal_summer") then
+                            ResultValue["Portals"]["Summer"] = GetNumberFromString(ResultValue["Portals"]["Summer"]) + (GetNumberFromString(v.OwnedAmount.Text))
+                        elseif string.find(lowerCaseName, "portal_item") and string.find(lowerCaseName, "_eclipse") then
+                            ResultValue["Portals"]["ItemEclipse"] = GetNumberFromString(ResultValue["Portals"]["ItemEclipse"]) + (GetNumberFromString(v.OwnedAmount.Text))
+                        end         
                     end
                 end
-    
-                description = description.."———————————————\n**Portal ประตูลับ** <a:HGWS_87:1054831644781051974>\n"
-                portal_boros = 0
-                portal_zeldris = 0 
-                april_portal_item = 0
+                description = description..("<:Screenshot20230914074356:1151685373232156682> **・**ประตูโบรอส : x%s\n")
+                description = description..("<:portal_zeldris:1094458475477733478>**・**ประตู7บาป : x%s\n")
+                description = description..("<:Screenshot20230910174555:1151441151639949322>**・**ประตูซัมเมอร์ : x%s\n")
+                description = description..("<:Screenshot20230913155524:1151441156559876108>**・**Eclipse Portal : x%s\n")
 
                 for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "portal_boros") and string.find(string.lower(v.Name), "g") then
-                    portal_boros = (GetNumberFromString(portal_boros) + (GetNumberFromString(v.OwnedAmount.Text)))                        
+                    if v:IsA("ImageButton") then
+                        local name = string.lower(v.Name)
+                        if string.find(name, "fruit") then
+                            if string.find(name, "epic") then
+                                ResultValue["StarFruits"]["Rainbow"] = v.OwnedAmount.Text
+                            elseif string.find(name, "blue") then
+                                ResultValue["StarFruits"]["Blue"] = v.OwnedAmount.Text
+                            elseif string.find(name, "red") then
+                                ResultValue["StarFruits"]["Red"] = v.OwnedAmount.Text
+                            elseif string.find(name, "pink") then
+                                ResultValue["StarFruits"]["Pink"] = v.OwnedAmount.Text
+                            elseif string.find(name, "green") then
+                                ResultValue["StarFruits"]["Green"] = v.OwnedAmount.Text
+                            end
+                        end
                     end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "portal_zeldris") then
-                        portal_zeldris = (GetNumberFromString(portal_zeldris) + (GetNumberFromString(v.OwnedAmount.Text)))                        
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "april_portal") and string.find(string.lower(v.Name), "_item") then
-                        april_portal_item = (GetNumberFromString(april_portal_item) + (GetNumberFromString(v.OwnedAmount.Text)))                        
-                    end                
                 end
-                description = description..("<:alien_portal:1069655711899983953>**・**ประตูโบรอส : x"..portal_boros.."\n")
-                description = description..("<:portal_zeldris:1094458475477733478>**・**ประตู7บาป : x"..portal_zeldris.."\n")
-               
-            
-                description = description.."———————————————\n**Star Fruits**  <a:8699rightrainbowstar:1054740408434966588>\n"
-            
+
+                description = description.."\n**● `Star Fruits`**  <a:8699rightrainbowstar:1054740408434966588>\n"
+                description = description.."<:Star_Fruit_29:1042744858080706600>**・**ดาวสีรุ้ง : %s\n"
+                description = description.."<:Star_Fruit_2999:1042744862950293636>**・**ดาวสีน้ำเงิน : %s\n"
+                description = description.."<:Star_Fruit_299:1042744860395962430>**・**ดาวสีแดง : %s\n"
+                description = description.."<:Star_Fruit_Pink:1042744853777350686>**・**ดาวสีชมพู : %s\n"
+                description = description.."<:Star_Fruit_2:1042744855811596368>**・**ดาวสีเขียว : %s\n"
+                description = description.."<:Star_Fruit:1042744851776667658>**・**ดาวสีเหลือง : %s\n"
+
+                                         
                 for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "epic") then
-                        description = description..("<:Star_Fruit_29:1042744858080706600>**・**ดาวสีรุ้ง  : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "blue") then
-                        description = description..("<:Star_Fruit_2999:1042744862950293636>**・**ดาวสีน้ำเงิน : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "red") then
-                        description = description..("<:Star_Fruit_299:1042744860395962430>**・**ดาวสีแดง : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "pink") then
-                        description = description..("<:Star_Fruit_Pink:1042744853777350686>**・**ดาวสีชมพู : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "green") then
-                        description = description..("<:Star_Fruit_2:1042744855811596368>**・**ดาวสีเขียว : "..v.OwnedAmount.Text.."\n")
+                    if v:IsA("ImageButton") then
+                        local name = string.lower(v.Name)
+                        if string.find(name, "star_remnant") then
+                            ResultValue["OtherItems"]["StarRemnant"] = v.OwnedAmount.Text
+                        elseif string.find(name, "luckpotion") then
+                            ResultValue["OtherItems"]["LuckPotion"] = v.OwnedAmount.Text
+                        elseif string.find(name, "summon_ticket") then
+                            ResultValue["OtherItems"]["SummonTicket"] = v.OwnedAmount.Text
+                        end
                     end
                 end
-                description = description.."<:Star_Fruit:1042744851776667658>**・**ดาวสีเหลือง : %s\n"                 
-                description = description.."———————————————\n**ไอเท็มอื่นๆ <a:espada:1047145577223295048> **\n"                          
-                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
-                    if v:IsA("ImageButton") and string.find((v.Name), "star_remnant") then
-                        description = description..("<:Star_Remnant:1042744865202634752>**・**Star Remnant  : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find((v.Name), "LuckPotion") then
-                        description = description..("<:Luck_Potion:1042745802130456647>**・**Luck Potion : "..v.OwnedAmount.Text.."\n")
-                    end
-                    if v:IsA("ImageButton") and string.find((v.Name), "summon_ticket") then
-                        description = description..("<:Summon_Ticket:1042744868004429854>**・**Summon Ticket : "..v.OwnedAmount.Text.."\n")
-                    end                   
-                end
+                -- แปลงตารางเป็นสตริง JSON
+                local json_data = HttpService:JSONEncode(ResultValue)
+                -- บันทึกสตริง JSON ลงในไฟล์
+                writefile(filename, json_data)
+
+                description = description.."\n**● `ไอเท็มอื่นๆ` <a:espada:1047145577223295048> **\n"
+                description = description.."<:Star_Remnant:1042744865202634752>**・**Star Remnant : %s\n"
+                description = description.."<:Luck_Potion:1042745802130456647>**・**Luck Potion : %s\n"
+                description = description.."<:Summon_Ticket:1042744868004429854>**・**Summon Ticket : %s\n"
                 description = description.."<:Rikugan_Eye:1042744849532723210>**・**ดวงตาโกโจ : %s\n"
-                
-                
+
                 if game:GetService("ReplicatedStorage")["_FX_CACHE"]:FindFirstChild("StarFruit") then
                     ResultValue["star"] = game:GetService("ReplicatedStorage")["_FX_CACHE"]["StarFruit"].OwnedAmount.Text
-                end
-                if game:GetService("ReplicatedStorage")["_FX_CACHE"]:FindFirstChild("black_clover_stone") then
-                    ResultValue["clover stone"] = game:GetService("ReplicatedStorage")["_FX_CACHE"]["black_clover_stone"].OwnedAmount.Text
-                end                  
+                end         
                 if game:GetService("ReplicatedStorage")["_FX_CACHE"]:FindFirstChild("six_eyes") then
                     ResultValue["Rikugan Eye"] = game:GetService("ReplicatedStorage")["_FX_CACHE"]["six_eyes"].OwnedAmount.Text
                 end
 
-                --[[description = description.."———————————————\n**เลเวลตัวละคร <a:sao5:1047146934659465277>**\n"
-                
-                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"].CollectionUnitFrame:GetChildren()) do
-                    if v:IsA("ImageButton") and v.EquippedList.Equipped.Visible == true then
-                        local CharacterName = v.name.Text
-                        local CharacterLevel = v.Main.Level.Text
-                        description = description..("[💂]"..CharacterName.." <a:8857pinkarrow:1021734806419148820> Level:"..CharacterLevel.."\n")
-                    end
-                end]]
-                
-                
+                local json_data = HttpService:JSONEncode(ResultValue)
+                writefile(filename, json_data)
+                            
                 SendWebhook(CurrentWebhook, " ", {
                     ["title"] = "**✨ PLaNS SHOP ✨**",
                     ["description"] = string.format(
@@ -1567,57 +1565,133 @@ if http then
                                             ResultValue["Gold"],                             
                                             ResultValue["Level"],
                                             ResultValue["LVBP"],
+                                            ResultValue["LVBP2"],
                                             ResultValue["Tower Room"],
-                                            ResultValue["clover stone"],
-                                            ResultValue["star"],                                                                    
-                                            ResultValue["Rikugan Eye"]                         
+                                            ------------------------------------
+                                            ResultValue["Portals"]["Boros"],
+                                            ResultValue["Portals"]["Zeldris"],
+                                            ResultValue["Portals"]["Summer"],
+                                            ResultValue["Portals"]["ItemEclipse"],
+                                            -------------------------------------
+                                            ResultValue["StarFruits"]["Rainbow"],
+                                            ResultValue["StarFruits"]["Blue"],
+                                            ResultValue["StarFruits"]["Red"],
+                                            ResultValue["StarFruits"]["Pink"],
+                                            ResultValue["StarFruits"]["Green"],
+                                            ResultValue["star"],
+                                            -------------------------------------
+                                            ResultValue["OtherItems"]["StarRemnant"],
+                                            ResultValue["OtherItems"]["LuckPotion"],
+                                            ResultValue["OtherItems"]["SummonTicket"],                                                        
+                                            ResultValue["Rikugan Eye"]                   
                                         ),
                     ["color"] = EmbedColor["IDK"],
                 })    
             end   
                                            
                         
-                        local LobbyEmbedDescription2 = "**Username:** ||%s||\n<a:emoji_98_jk:1054831096929452042> แจ้งเตือนสถานะ <a:8699rightrainbowstar:1054740408434966588>\n<a:reder:1054831728419672144> เล่นจบแล้วตอนนี้อยู่ในล็อบบี้ (ห้ามเข้ารหัสตอนนี้) <a:aHamsterRougeBoule:1054831885706084393>\n"
-                        LobbyEmbedDescription2 = string.format(LobbyEmbedDescription2, Player.Name)
-                        SendWebhook(CurrentWebhook, " ", {
-                            ["title"] = "**✨ PLaNS SHOP ✨**",
+                        local LobbyEmbedDescription2 = "### <a:reder:1054831728419672144> ตอนนี้อยู่ในล๊อบบี้ <a:reder:1054831728419672144>"
+                        LobbyEmbedDescription2 = string.format(LobbyEmbedDescription2)
+                        SendWebhook3(CurrentWebhook, " ", {
                             ["description"] = LobbyEmbedDescription2,
                             ["color"] = EmbedColor["Red"],
                         })
                     end
                 else
-                    local InRoundEmbedDescription = "**Username:** ||%s||\n<a:emoji_98_jk:1054831096929452042> แจ้งเตือนสถานะ <a:8699rightrainbowstar:1054740408434966588>\n<a:greener:1054831716256206930> ตอนนี้อยู่ในแมพกำลังเริ่มฟาร์ม\n"
-                    InRoundEmbedDescription = string.format(InRoundEmbedDescription, Player.Name)
+                    local InRoundEmbedDescription = "### <a:greener:1054831716256206930> ตอนนี้อยู่ในเกมกำลังฟาม <a:greener:1054831716256206930> "
+                    InRoundEmbedDescription = string.format(InRoundEmbedDescription)
 
-                    SendWebhook22(CurrentWebhook, " ", {
-                        ["title"] = "**✨ PLaNS SHOP ✨**",
+                    SendWebhook3(CurrentWebhook, " ", {
                         ["description"] = InRoundEmbedDescription,
                         ["color"] = EmbedColor["Green"],
                     })
                     spawn(function()
-                        repeat wait(5) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
-                        if CurrentSettings["Config"]["Webhook"]["Send When Round Ended"] then
-                            local RoundEndedDescription = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level : %s```\n```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficulty: %s\n- Waves : %s | %s ```\n```md\n#Enemies Killed\n- %d Enemies\n- %.2f DMG```\n"                       
-                            wait(3)
-                            RoundEndedDescription = string.format(RoundEndedDescription, Player.Name, GemPath.Value , GoldPath.Value , GetCurrentLevel(), InfoGameEnd.Text, TitlePath.Text.." | "..DescriptionPath.Text, DifficultyPath.Text, GetNumberFromString(WaveCompleted.Text), TimeCompleted.Text, KillsInGame.Value, DMGsInGane.Value)
-                            RoundEndedDescription = RoundEndedDescription..("```md\n#Rewards\n")
-                            
+                        repeat wait(5.5) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
+                        if CurrentSettings["Config"]["Webhook"]["Send When Round Ended"] then                      
+                            local filename = "PLANSWEBHOOK/"..tostring(game.Players.LocalPlayer.Name).."_Webhook.json"                       
+                            local json_data = readfile(filename)
+                            local ResultValue = HttpService:JSONDecode(json_data)
+        
+                            --local RoundEndedDescription = "**● `ข้อมูลผู้เล่น`** <a:3018pinkheart:1019689700224684122>\n🔒**・**Name : ||%s||\n<:Gems:1058285006755209267>**・**Gems : %s\n<:Gold:1058285013243805867>**・**Golds : %s\n🧪**・**Level : %s\n🍰**・**BattlePass : %s [%s]\n\n**●`Portal ประตูลับ`**\n<:portal_zeldris:1094458475477733478>**・**ประตูโบรอส : %sx\n<:portal_zeldris:1094458475477733478>**・**ประตู7บาป : %sx\n<:Screenshot20230910174555:1151441151639949322>**・**ประตูซัมเมอร์ : %sx\n<:Screenshot20230913155524:1151441156559876108>**・**Eclipse Portal : %sx\n\n**●`Star Fruits`**\n\n**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s \n⏳**・**%s \n👻**・**Kill %d Enemies\n"   
+                            local playerInfo = string.format(
+                                "**● `ข้อมูลผู้เล่น`** <a:3018pinkheart:1019689700224684122>\n🔒**・**Name : ||%s||\n<:Gems:1058285006755209267>**・**Gems : %s\n<:Gold:1058285013243805867>**・**Golds : %s\n🧪**・**Level : %s\n🍰**・**BattlePass : %s [%s]\n\n",
+                                Player.Name,
+                                GemPath.Value,
+                                GoldPath.Value,
+                                GetCurrentLevel(),
+                                ResultValue["LVBP"],
+                                ResultValue["LVBP2"]
+                            ) 
+                            local portalInfo = string.format(
+                                "**●`Portal ประตูลับ`**\n<:Screenshot20230914074356:1151685373232156682> **・**ประตูโบรอส : x%s\n<:portal_zeldris:1094458475477733478>**・**ประตู7บาป : x%s\n<:Screenshot20230910174555:1151441151639949322>**・**ประตูซัมเมอร์ : x%s\n<:Screenshot20230913155524:1151441156559876108>**・**Eclipse Portal : x%s\n\n",
+                                ResultValue["Portals"]["Boros"],
+                                ResultValue["Portals"]["Zeldris"],
+                                ResultValue["Portals"]["Summer"],
+                                ResultValue["Portals"]["ItemEclipse"]
+                            )
+                            local starInfo = string.format(
+                                "**●`Star Fruits`**\n<:Star_Fruit_29:1042744858080706600>**・**ดาวสีรุ้ง : %s\n<:Star_Fruit_2999:1042744862950293636>**・**ดาวสีน้ำเงิน : %s\n<:Star_Fruit_299:1042744860395962430>**・**ดาวสีแดง : %s\n<:Star_Fruit_Pink:1042744853777350686>**・**ดาวสีชมพู : %s\n<:Star_Fruit_2:1042744855811596368>**・**ดาวสีเขียว : %s\n<:Star_Fruit:1042744851776667658>**・**ดาวสีเหลือง : %s\n\n",
+                                ResultValue["StarFruits"]["Rainbow"],
+                                ResultValue["StarFruits"]["Blue"],
+                                ResultValue["StarFruits"]["Red"],
+                                ResultValue["StarFruits"]["Pink"],
+                                ResultValue["StarFruits"]["Green"],
+                                ResultValue["star"]
+                            )
+                            local miscInfo = string.format(
+                                "**●`ไอเท็มอื่นๆ`**\n<:Star_Remnant:1042744865202634752>**・**Star Remnant : %s\n<:Luck_Potion:1042745802130456647>**・**Luck Potion : %s\n<:Summon_Ticket:1042744868004429854>**・**Summon Ticket : %s\n<:Rikugan_Eye:1042744849532723210>**・**ดวงตาโกโจ : %s\n\n",
+                                ResultValue["OtherItems"]["StarRemnant"],
+                                ResultValue["OtherItems"]["LuckPotion"],
+                                ResultValue["OtherItems"]["SummonTicket"],                                                        
+                                ResultValue["Rikugan Eye"]            
+                            )
+                            local gameInfo = string.format(
+                                "**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s\n⏳**・**%s\n👻**・**Kill %d Enemies\n",
+                                TitlePath.Text.." | "..DescriptionPath.Text,
+                                InfoGameEnd.Text,
+                                GetNumberFromString(WaveCompleted.Text),
+                                TimeCompleted.Text,
+                                KillsInGame.Value
+                            )                             
+                            wait(3.5)
+                            local RoundEndedDescription = playerInfo .. portalInfo .. starInfo .. miscInfo .. gameInfo
+                            --[[RoundEndedDescription = string.format(RoundEndedDescription, 
+                                                                    Player.Name, 
+                                                                    GemPath.Value , 
+                                                                    GoldPath.Value , 
+                                                                    GetCurrentLevel(), 
+                                                                    ResultValue["LVBP"], 
+                                                                    ResultValue["LVBP2"],
+                                                                    --------------------------------------------
+                                                                    ResultValue["Portals"]["Boros"],
+                                                                    ResultValue["Portals"]["Zeldris"],
+                                                                    ResultValue["Portals"]["Summer"],
+                                                                    ResultValue["Portals"]["ItemEclipse"],
+                                                                    --------------------------------------------
+                                                                    TitlePath.Text.." | "..DescriptionPath.Text,
+                                                                    InfoGameEnd.Text, 
+                                                                    GetNumberFromString(WaveCompleted.Text), 
+                                                                    TimeCompleted.Text, 
+                                                                    KillsInGame.Value)  ]]--
                             local XPAmount = tonumber(GetNumberFromString(PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text))
                             local GemAmount = tonumber(GetNumberFromString(PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text))
                             
                             if GemAmount < 10000 then
-                                RoundEndedDescription = RoundEndedDescription..("  ◈ [+ "..tostring(GemAmount).." Gems]\n")
+                                RoundEndedDescription = RoundEndedDescription..("<:Gems:1058285006755209267>**・**Gems : + "..tostring(GemAmount).."\n")
                             end                          
-                            RoundEndedDescription = RoundEndedDescription..("  ◈ [+ "..tostring(XPAmount).." XP]\n")
-                            RoundEndedDescription = RoundEndedDescription..("```")
+                            RoundEndedDescription = RoundEndedDescription..("<a:5622bloodpotion:1047140829703180298> **・**XP : + "..tostring(XPAmount).."\n")
 
                             if CurrentSettings["Config"]["Webhook"]["Check Currency"] then
-                                CheckCurrency(CurrentWebhook, RoundEndedDescription)
+                                CheckCurrency(CurrentWebhook, RoundEndedDescription)                               
                             else
-                                SendWebhook22(CurrentWebhook, " ", {
+                                SendWebhook(CurrentWebhook, " ", {
                                     ["title"] = "**✨ PLaNS SHOP ✨**",
                                     ["description"] = RoundEndedDescription,
                                     ["color"] = EmbedColor["PPc"],
+                                    ["image"] = {
+                                        ["url"] = ThumbnailURL,
+                                    },
+                                    
                                 })
                             end
                             delay(1, function()
@@ -2970,12 +3044,15 @@ if http then
     -- // Summon System \\ --
     SetUpSummonSniper()
     -- // Webhook System \\ --
+
     SetUpWebhookSystem()
+
     -- // Claim Gift / Battle Pass \\ --
     ClaimGiftAndBattlePass()
 
     -- // Library \\ --
-    local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/SinnyDEV/Lib/main/UI.lua"))()
+    local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI"))()
+    -- loadstring(game:HttpGet("https://raw.githubusercontent.com/SinnyDEV/Lib/main/UI.lua"))()
     -- local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/SinnyDEV/Lib/main/SaveManager.lua"))()
     -- local ThemeManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/SinnyDEV/Lib/main/ThemeManager.lua"))()
 
