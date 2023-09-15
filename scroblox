@@ -1490,7 +1490,7 @@ if http then
                         end         
                     end
                 end
-                description = description..("<:alienPortal:1152094569085816922>**・**ประตูโบรอส : x%s\n")
+                description = description..("<:alienPortal:1152098377895530557>**・**ประตูโบรอส : x%s\n")
                 description = description..("<:ab4d56g4er7gsdr4g897er4hgefg:1152086720603504690>**・**ประตู7บาป : x%s\n")
                 description = description..("<:Screenshot20230910174555:1151441151639949322>**・**ประตูซัมเมอร์ : x%s\n")
                 description = description..("<:Screenshot20230913155524:1151441156559876108>**・**Eclipse Portal : x%s\n")
@@ -1622,7 +1622,7 @@ if http then
                                 ResultValue["LVBP2"]
                             ) 
                             local portalInfo = string.format(
-                                "**●`Portal ประตูลับ`**\n<:alienPortal:1152094569085816922>**・**ประตูโบรอส : x%s\n<:ab4d56g4er7gsdr4g897er4hgefg:1152086720603504690>**・**ประตู7บาป : x%s\n<:Screenshot20230910174555:1151441151639949322>**・**ประตูซัมเมอร์ : x%s\n<:Screenshot20230913155524:1151441156559876108>**・**Eclipse Portal : x%s\n\n",
+                                "**●`Portal ประตูลับ`**\n<:alienPortal:1152098377895530557>**・**ประตูโบรอส : x%s\n<:ab4d56g4er7gsdr4g897er4hgefg:1152086720603504690>**・**ประตู7บาป : x%s\n<:Screenshot20230910174555:1151441151639949322>**・**ประตูซัมเมอร์ : x%s\n<:Screenshot20230913155524:1151441156559876108>**・**Eclipse Portal : x%s\n\n",
                                 ResultValue["Portals"]["Boros"],
                                 ResultValue["Portals"]["Zeldris"],
                                 ResultValue["Portals"]["Summer"],
