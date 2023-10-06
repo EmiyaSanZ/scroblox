@@ -1644,7 +1644,7 @@ if http then
                                 ResultValue["OtherItems"]["SummonTicket"],                                                        
                                 ResultValue["Rikugan Eye"]            
                             )
-                            --wait(4)
+                            wait(0.5)
                             repeat wait(1) until WaveCompleted.Text ~= "999" and TimeCompleted.Text ~= "22:55"
                             local gameInfo = string.format(
                                 "**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s\n⏳**・**%s\n👻**・**Kill %d Enemies\n",
