@@ -358,7 +358,7 @@ if http then
                         ["Auto"] = false,
                     },
                     ["Sell"] = {
-                        ["Auto"] = false,
+                        ["Auto"] = true,
                         ["Wave"] = 25,
                     },
                     ["Leave"] = {
