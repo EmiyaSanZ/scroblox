@@ -1644,7 +1644,7 @@ if http then
                                 ResultValue["OtherItems"]["SummonTicket"],                                                        
                                 ResultValue["Rikugan Eye"]            
                             )
-                            --[[wait(0.5)
+                            wait(0.5)
                             repeat wait(0.5) until WaveCompleted.Text ~= "999" and TimeCompleted.Text ~= "22:55"
                             local gameInfo = string.format(
                                 "**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s\n⏳**・**%s\n👻**・**Kill %d Enemies\n",
@@ -1653,8 +1653,8 @@ if http then
                                 GetNumberFromString(WaveCompleted.Text),
                                 TimeCompleted.Text,
                                 KillsInGame.Value
-                            ) ]]                            
-                            wait(0.5)
+                            )                             
+                            wait(1)
                             local RoundEndedDescription = playerInfo .. portalInfo .. starInfo .. miscInfo .. gameInfo
                             --[[RoundEndedDescription = string.format(RoundEndedDescription, 
                                                                     Player.Name, 
