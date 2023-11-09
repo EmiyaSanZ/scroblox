@@ -1645,7 +1645,7 @@ if http then
                                 ResultValue["Rikugan Eye"]            
                             )
                             wait(0.5)
-                            repeat wait(1) until WaveCompleted.Text ~= "999" and TimeCompleted.Text ~= "22:55"
+                            repeat wait(0.5) until WaveCompleted.Text ~= "999" and TimeCompleted.Text ~= "22:55"
                             local gameInfo = string.format(
                                 "**●`Game Infomation`**\n🗺️**・**Map : %s\n🎮**・**Game : %s\n🌊**・**Waves : %s\n⏳**・**%s\n👻**・**Kill %d Enemies\n",
                                 TitlePath.Text.." | "..DescriptionPath.Text,
@@ -1654,7 +1654,7 @@ if http then
                                 TimeCompleted.Text,
                                 KillsInGame.Value
                             )                             
-                            wait(1)
+                            wait(0.5)
                             local RoundEndedDescription = playerInfo .. portalInfo .. starInfo .. miscInfo .. gameInfo
                             --[[RoundEndedDescription = string.format(RoundEndedDescription, 
                                                                     Player.Name, 
