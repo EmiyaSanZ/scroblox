@@ -1606,7 +1606,7 @@ if http then
                         ["color"] = EmbedColor["Green"],
                     })
                     spawn(function()
-                        repeat wait(3.5) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
+                        repeat wait(3) until game:GetService("Workspace")["_DATA"].GameFinished.Value == true
                         if CurrentSettings["Config"]["Webhook"]["Send When Round Ended"] then                      
                             local filename = "PLANSWEBHOOK/"..tostring(game.Players.LocalPlayer.Name).."_Webhook.json"                       
                             local json_data = readfile(filename)
