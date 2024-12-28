@@ -192,7 +192,7 @@ local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/Emiya
 local Window  = Library:CreateWindow({
     Title    = "PLaNS x SHOP",
     Center   = true,
-    AutoShow = true, -- เริ่มต้นแสดง UI ทันที
+    AutoShow = false, -- เริ่มต้นแสดง UI ทันที
 })
 
 local MainTab     = Window:AddTab("PLaNS x SHOP")
