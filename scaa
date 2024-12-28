@@ -17,41 +17,27 @@ local player     = Players.LocalPlayer
 _G.Webhook   = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
---------------------------------------------------------------------------------
--- (A0) ตั้งค่าโฟลเดอร์และชื่อไฟล์ (ตามชื่อผู้เล่น)
---------------------------------------------------------------------------------
+-- ชื่อไฟล์ JSON
+local SettingsFile = "UserData.json"
 
-local SettingsPath = "PLaNSxSHOP"        -- ชื่อโฟลเดอร์ที่จะเก็บไฟล์
-if not isfolder or not writefile then
-    warn("Executor ไม่รองรับ isfolder/makefolder หรือ writefile => อาจใช้งานไม่ได้")
-end
-
--- ตรวจสอบ/สร้างโฟลเดอร์
-if isfolder and not isfolder(SettingsPath) then
-    makefolder(SettingsPath)
-end
-
--- ตั้งชื่อไฟล์เป็นโฟลเดอร์ + ชื่อผู้เล่น + .json
-local SettingsFile = SettingsPath.."\\"..player.Name..".json"
-
---------------------------------------------------------------------------------
--- (A1) ค่าเริ่มต้น (ถ้าไม่เคยมีไฟล์)
---------------------------------------------------------------------------------
+-- ค่าเริ่มต้น (ถ้าไม่เคยมีไฟล์)
 local DefaultData = {
     -- เราไม่ใช้ MaxGems แบบกรอกตรง ๆ แต่ยังเก็บเป็นค่า "MaxGems รวม" หลังคำนวณ
     MaxGems        = 0,
+
     DiscordID      = "",
     OldGems        = 0,
     IsSended       = false,
+
     -- เพิ่มฟิลด์นี้เพื่อจำ “จำนวนที่ต้องการฟาร์มเพิ่ม”
     AddGemsWanted  = 0
 }
 
 --------------------------------------------------------------------------------
--- (B) ฟังก์ชันอ่าน/เขียนไฟล์ JSON
+-- (A1) ฟังก์ชันอ่าน/เขียนไฟล์ JSON
 --------------------------------------------------------------------------------
+
 local function loadSettings()
-    -- เช็กว่ามีฟังก์ชัน isfile, readfile ไหม
     if isfile and isfile(SettingsFile) then
         local s = readfile(SettingsFile)
         local ok, data = pcall(function()
@@ -60,7 +46,7 @@ local function loadSettings()
         if ok and type(data)=="table" then
             return data
         else
-            warn("ไฟล์ JSON พัง => สร้างใหม่: "..SettingsFile)
+            warn("ไฟล์ JSON พัง => สร้างใหม่")
         end
     end
     if writefile then
@@ -79,9 +65,8 @@ local function saveSettings(tbl)
 end
 
 --------------------------------------------------------------------------------
--- (C) โหลดข้อมูล JSON + หาค่า Gems ปัจจุบัน
+-- (B) โหลดข้อมูล JSON + คำนวณค่า Gems ปัจจุบัน
 --------------------------------------------------------------------------------
-
 local LocalData = loadSettings()
 
 local MaxGems       = LocalData.MaxGems        or 0  -- เป้าหมายรวม
@@ -90,8 +75,8 @@ local OldGems       = LocalData.OldGems        or 0
 local IsSended      = LocalData.IsSended       or false
 local AddGemsWanted = LocalData.AddGemsWanted  or 0  -- จำนวนที่ผู้ใช้กรอกว่าต้องการฟาร์มเพิ่ม
 
-local stats = player:WaitForChild("_stats", 30)
-local gemObj = stats and stats:WaitForChild("gem_amount", 30)
+local playerStats = player:WaitForChild("_stats", 30)
+local gemObj = playerStats and playerStats:WaitForChild("gem_amount", 30)
 
 local currentGems = 0
 if gemObj and typeof(gemObj.Value)=="number" then
@@ -101,7 +86,7 @@ else
 end
 
 --------------------------------------------------------------------------------
--- (D) ฟังก์ชันส่ง Webhook / WebhookEnd
+-- (C) ฟังก์ชันส่ง Webhook / WebhookEnd
 --------------------------------------------------------------------------------
 local function sendWebhook(title, desc)
     local req = http_request or request or HttpPost or syn and syn.request
@@ -152,9 +137,8 @@ local function sendWebhookEnd(title, desc)
 end
 
 --------------------------------------------------------------------------------
--- (E) ส่ง Webhook ทันที + คำนวณ
+-- (D) ส่ง Webhook ทันที
 --------------------------------------------------------------------------------
-
 sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
@@ -162,6 +146,7 @@ sendWebhook(
         "เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
         "เป้าหมาย : **%d** <a:8865diamond:1047145579790221433>\n" ..
         "ยอดฟาร์มเพชรที่ต้องการ **%d**" ,
+
         player.Name,
         currentGems,
         MaxGems,
@@ -169,7 +154,9 @@ sendWebhook(
     )
 )
 
--- ถ้าผู้เล่นใช้เพชร => หัก MaxGems
+--------------------------------------------------------------------------------
+-- (E) ปรับลด MaxGems ถ้าใช้เพชร
+--------------------------------------------------------------------------------
 if currentGems < OldGems then
     local diff = OldGems - currentGems
     LocalData.MaxGems = math.max(LocalData.MaxGems - diff, 0)
@@ -180,6 +167,7 @@ end
 
 LocalData.OldGems = currentGems
 
+-- ถ้าถึงเป้า => ส่ง WebhookEnd
 if currentGems >= LocalData.MaxGems
    and LocalData.MaxGems > 0
    and (not LocalData.IsSended) then
@@ -209,7 +197,9 @@ local Window  = Library:CreateWindow({
 local MainTab     = Window:AddTab("PLaNS x SHOP")
 local SettingsBox = MainTab:AddLeftGroupbox("Settings")
 
+--------------------------------------------------------------------------------
 -- ช่องให้ผู้ใช้ใส่ “ต้องการฟาร์มเพิ่มกี่เพชร” (AddGemsWanted)
+--------------------------------------------------------------------------------
 local addGemsInput = SettingsBox:AddInput('Add Gems', {
     Numeric     = true,
     Finished    = false,
@@ -226,7 +216,11 @@ local di = SettingsBox:AddInput('Discord ID', {
     Default     = LocalData.DiscordID
 })
 
+--------------------------------------------------------------------------------
+-- ปุ่ม Save Settings
+--------------------------------------------------------------------------------
 SettingsBox:AddButton('Save Settings', function()
+    -- ผู้ใช้กรอกว่าต้องการเพิ่มเท่าไร
     local addGemsNum = tonumber(addGemsInput.Value) or 0
 
     -- MaxGems = currentGems + addGemsNum
@@ -235,6 +229,7 @@ SettingsBox:AddButton('Save Settings', function()
     LocalData.AddGemsWanted = addGemsNum -- เก็บไว้โชว์/Debug
     LocalData.IsSended      = false
 
+    -- ถ้า OldGems ยังไม่เป็น number ให้เซต 0 (กัน error)
     if typeof(LocalData.OldGems) ~= "number" then
         LocalData.OldGems = 0
     end
@@ -250,7 +245,9 @@ SettingsBox:AddButton('Save Settings', function()
     ))
 end)
 
+--------------------------------------------------------------------------------
 -- ปุ่ม Test Webhook
+--------------------------------------------------------------------------------
 SettingsBox:AddButton('Test Webhook', function()
     local testDesc = string.format(
         "ทดสอบเเจ้งเตือน!\nผู้เล่น: %s\nเพชรตอนนี้: %d\nเป้าหมายทั้งหมด: %d\n(ต้องการฟาร์มเพิ่ม: %d)",
@@ -262,6 +259,9 @@ SettingsBox:AddButton('Test Webhook', function()
     sendWebhook("ทดสอบแจ้งเตือนๆ", testDesc)
 end)
 
+--------------------------------------------------------------------------------
+-- Toggle White Screen (ถ้าต้องการ)
+--------------------------------------------------------------------------------
 SettingsBox:AddLabel("Optional UI Toggles"):AddTooltip("ถ้าไม่ต้องการก็ลบได้")
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
     Text    = 'Toggle White Screen',
@@ -271,4 +271,4 @@ WhiteScreenToggle:OnChanged(function(value)
     RunService:Set3dRenderingEnabled(not value)
 end)
 
-print("Script loaded (unique file per player). Add Gems => MaxGems = current + addGemsNum, UI ok!")
+print("Script loaded: Add Gems => MaxGems = current + addGemsNum, UI ok!")
