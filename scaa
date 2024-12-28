@@ -1,4 +1,4 @@
---// no_file_simple.lua
+--// no_file_simple_with_oldgems.lua
 --#####################################################
 --  ส่วนที่ 1: ตั้งค่าพื้นฐาน
 --#####################################################
@@ -25,6 +25,9 @@ local DiscordID = ""
 local WhiteScreen = false
 local IsSended = false
 
+-- เราจะใช้ OldGems เพื่อจำ “ค่า Gems ล่าสุด” ที่เจอ
+local OldGems = nil  -- ถ้ายังไม่เคยกำหนด จะเป็น nil
+
 --#####################################################
 --  ส่วนที่ 3: สร้าง GUI
 --#####################################################
@@ -45,7 +48,6 @@ local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
 })
 WhiteScreenToggle:OnChanged(function(value)
     WhiteScreen = value
-    -- ปิด/เปิด 3D Rendering
     RunService:Set3dRenderingEnabled(not value)
 end)
 
@@ -71,18 +73,26 @@ local di = SettingsBox:AddInput('Discord ID', {
 SettingsBox:AddButton('Save Settings', function()
     MaxGems = tonumber(mg.Value) or 0
     DiscordID = di.Value
-    IsSended = false  -- เคลียร์สถานะส่ง WebhookEnd
-    print("Saved Settings (in memory). MaxGems =", MaxGems, "DiscordID =", DiscordID)
+    IsSended = false  -- รีเซ็ตสถานะ ส่ง WebhookEnd ใหม่ได้
+
+    -- ถ้ายังไม่มี OldGems เลย ให้ตั้งเป็นค่าปัจจุบัน
+    local current = 0
+    pcall(function()
+        current = player._stats.gem_amount.Value
+    end)
+    if not OldGems then
+        OldGems = current
+    end
+
+    print("Saved Settings (in memory). MaxGems =", MaxGems, "DiscordID =", DiscordID, "OldGems =", OldGems)
 end)
 
 --#####################################################
 --  ส่วนที่ 4: ฟังก์ชันส่ง Webhook
 --#####################################################
-
--- ส่ง Webhook “ปกติ” (แจ้งเหตุทั่วไป เช่น จบเกม)
 local function sendWebhookNormal(title, description)
-    local requestFunc = syn and syn.request or http_request or request
-    if not requestFunc then
+    local req = syn and syn.request or http_request or request
+    if not req then
         warn("No request function found for Normal Webhook!")
         return
     end
@@ -96,7 +106,7 @@ local function sendWebhookNormal(title, description)
             }
         }
     }
-    requestFunc({
+    req({
         Url = _G.Webhook,
         Method = "POST",
         Headers = { ["Content-Type"] = "application/json" },
@@ -104,10 +114,9 @@ local function sendWebhookNormal(title, description)
     })
 end
 
--- ส่ง Webhook “End” (เมื่อ Gems ถึง Max)
 local function sendWebhookEnd(title, description)
-    local requestFunc = syn and syn.request or http_request or request
-    if not requestFunc then
+    local req = syn and syn.request or http_request or request
+    if not req then
         warn("No request function found for End Webhook!")
         return
     end
@@ -121,7 +130,7 @@ local function sendWebhookEnd(title, description)
             }
         }
     }
-    requestFunc({
+    req({
         Url = WebhookEnd,
         Method = "POST",
         Headers = { ["Content-Type"] = "application/json" },
@@ -130,26 +139,42 @@ local function sendWebhookEnd(title, description)
 end
 
 --#####################################################
---  ส่วนที่ 5: ตรวจสอบ Gems และแจ้งเตือน
+--  ส่วนที่ 5: ตรวจสอบ Gems และอัปเดต MaxGems ตามโค้ดเก่า
 --#####################################################
--- ฟังก์ชันเช็ค Gems >= MaxGems
 local function CheckGems()
     local currentGems = 0
     pcall(function()
         currentGems = player._stats.gem_amount.Value
     end)
 
-    if currentGems >= MaxGems and MaxGems > 0 and not IsSended then
-        -- ส่งแจ้งเตือนเฉพาะครั้งแรก
+    -- ถ้ายังไม่มี OldGems เลย (กรณีสคริปต์เพิ่งโหลด แต่ยังไม่กด SaveSetting)
+    if not OldGems then
+        OldGems = currentGems
+    end
+
+    -- ถ้าค่า Gems ปัจจุบันน้อยกว่า OldGems แปลว่าผู้เล่นใช้เพชร
+    if currentGems < OldGems then
+        local diff = OldGems - currentGems
+        MaxGems = MaxGems - diff
+
+        print(string.format("ลด MaxGems ลง %d => ตอนนี้ MaxGems = %d", diff, MaxGems))
+        OldGems = currentGems
+    elseif currentGems > OldGems then
+        -- ถ้า Gems เพิ่มขึ้นก็แค่จำค่าใหม่
+        OldGems = currentGems
+    end
+
+    -- จากนั้นเช็คว่าถึง MaxGems แล้วหรือยัง
+    if currentGems >= MaxGems and MaxGems > 0 and (not IsSended) then
         sendWebhookEnd(
             "Gems Reached Max!",
-            string.format("**%s** สะสมได้ **%d / %d** Gems แล้ว! \nขอบคุณที่ใช้บริการน้า ✨", player.Name, currentGems, MaxGems)
+            string.format("**%s** สะสมได้ **%d / %d** Gems แล้ว! \n(รวมถึงมีการใช้เพชรระหว่างทางก็หักไว้ให้แล้ว)", player.Name, currentGems, MaxGems)
         )
         IsSended = true
     end
 end
 
--- 5.1) เช็ค Gems ทุก ๆ 10 วินาที
+-- (5.1) เช็ค Gems ทุก 10 วินาที
 spawn(function()
     while true do
         wait(10)
@@ -157,7 +182,7 @@ spawn(function()
     end
 end)
 
--- 5.2) แจ้งเมื่อ “จบเกม” ถ้ามี GameFinished
+-- (5.2) แจ้งเมื่อ “จบเกม” ถ้ามี GameFinished
 spawn(function()
     local gameFinished = nil
     pcall(function()
@@ -181,4 +206,4 @@ spawn(function()
     end
 end)
 
-print("PLaNS x SHOP (no-file-simple) script loaded. All settings are in-memory only!")
+print("PLaNS x SHOP (no_file_simple_with_oldgems) loaded. All data is in memory only!")
