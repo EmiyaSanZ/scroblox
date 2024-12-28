@@ -18,7 +18,9 @@ _G.Webhook   = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
 -- ชื่อไฟล์ JSON
-local SettingsFile = "UserData.json"
+local player1 = game:GetService("Players").LocalPlayer
+local SettingsFile = player1.Name.."_SHOPData.json"
+--local SettingsFile = "UserData.json"
 
 -- ค่าเริ่มต้น (ถ้าไม่เคยมีไฟล์)
 local DefaultData = {
