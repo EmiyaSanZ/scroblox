@@ -1,0 +1,159 @@
+--// new_simple.lua
+--////////////////////////////////////////////////
+--  ส่วนที่ 1: ตั้งค่าพื้นฐาน
+--////////////////////////////////////////////////
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+-- ตัวแปร Webhook หลัก (เปลี่ยนได้ตามต้องการ)
+_G.Webhook = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
+
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+
+-- เราจะเก็บค่า Max Gems ไว้ในไฟล์เล็กๆ ชื่อ "UserData.json"
+local SettingsFile = "UserData.json"
+local DefaultData = {
+    MaxGems = 0
+}
+
+-- ฟังก์ชันช่วยอ่านไฟล์/เขียนไฟล์
+local function loadSettings()
+    if isfile(SettingsFile) then
+        local s = readfile(SettingsFile)
+        local t = HttpService:JSONDecode(s)
+        return t
+    else
+        writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
+        return DefaultData
+    end
+end
+
+local function saveSettings(t)
+    writefile(SettingsFile, HttpService:JSONEncode(t))
+end
+
+-- โหลดข้อมูลเริ่มต้นจากไฟล์ (ถ้าไม่มีจะสร้างไฟล์ใหม่พร้อม default)
+local LocalData = loadSettings()
+local MaxGems = LocalData.MaxGems or 0
+
+--////////////////////////////////////////////////
+--  ส่วนที่ 2: สร้าง GUI เพื่อให้ผู้ใช้กรอกค่าได้
+--////////////////////////////////////////////////
+
+-- โหลดไลบรารี UI (ตัวเดียวกับในโค้ดตัวอย่าง)
+local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/SinnyDEV/Lib/main/UI.lua'))()
+
+-- สร้าง Window หลัก
+local Window = Library:CreateWindow({
+    Title = "PLaNS x SHOP",
+    Center = true, 
+    AutoShow = true,
+})
+
+-- สร้างแท็บหลัก
+local MainTab = Window:AddTab("PLaNS x SHOP")
+
+-- สร้าง Groupbox สำหรับตั้งค่า
+local SettingsBox = MainTab:AddLeftGroupbox("Settings")
+
+-- สร้างช่องกรอก Max Gems
+local MaxGemInput = SettingsBox:AddInput('Max Gems', {
+    Numeric = true,
+    Default = MaxGems,         -- ใส่ค่าจากไฟล์
+    Text = "Max Gems",
+    Placeholder = "ใส่จำนวน Gems ที่ต้องการฟาร์ม",
+    Tooltip = "เมื่อจบเกมหรือตรวจพบว่าถึง MaxGems แล้วจะส่ง Webhook", 
+})
+
+-- ปุ่มเซฟค่า
+SettingsBox:AddButton("Save Settings", function()
+    LocalData.MaxGems = tonumber(MaxGemInput.Value) or 0
+    saveSettings(LocalData)
+    MaxGems = LocalData.MaxGems
+    print("Saved Max Gems =", MaxGems)
+end)
+
+--////////////////////////////////////////////////
+--  ส่วนที่ 3: ฟังก์ชันส่ง Webhook
+--////////////////////////////////////////////////
+local function sendWebhook(title, description)
+    local requestFunc = syn and syn.request or http_request or request
+    if not requestFunc then
+        warn("ไม่พบฟังก์ชัน request สำหรับส่ง Webhook!")
+        return
+    end
+
+    local data = {
+        ["content"] = "",
+        ["embeds"] = {
+            {
+                ["title"] = title,
+                ["description"] = description,
+                ["color"] = 5763719 -- สีเทาเขียว
+            }
+        }
+    }
+
+    requestFunc({
+        Url = _G.Webhook,
+        Method = "POST",
+        Headers = { ["Content-Type"] = "application/json" },
+        Body = HttpService:JSONEncode(data)
+    })
+end
+
+--////////////////////////////////////////////////
+--  ส่วนที่ 4: แจ้งเตือนตอนจบเกม และเช็คว่า Gems ถึง MaxGems ไหม
+--////////////////////////////////////////////////
+
+-- 4.1) กรณีต้องการให้แจ้งเตือน “ทุกครั้งที่จบเกม”:
+local GameFinished = workspace:WaitForChild("_DATA"):WaitForChild("GameFinished")
+GameFinished.Changed:Connect(function()
+    if GameFinished.Value == true then
+        -- เมื่อจบเกมแล้วดึงข้อมูล Gems ปัจจุบัน
+        local currentGems = 0
+        pcall(function()
+            currentGems = player._stats.gem_amount.Value
+        end)
+
+        -- ส่ง Webhook เพื่อบอกว่าจบเกมแล้ว พร้อมส่งจำนวน Gems
+        sendWebhook(
+            "End Game Info",
+            string.format("Player: **%s**\nGems Now: **%d** / %d", player.Name, currentGems, MaxGems)
+        )
+
+        -- ถ้า Gems >= MaxGems ส่งแจ้งเตือนพิเศษ
+        if currentGems >= MaxGems and MaxGems > 0 then
+            sendWebhook(
+                "Gems Reached Max!",
+                string.format("คุณ %s สะสม **%d / %d** เรียบร้อยแล้ว!", player.Name, currentGems, MaxGems)
+            )
+        end
+    end
+end)
+
+-- 4.2) กรณีต้องการ “เช็ค Gems ระหว่างเล่น” (ไม่รอให้จบเกมก็เช็ค):
+spawn(function()
+    while true do
+        wait(10) -- เช็คทุก 10 วินาที
+        local currentGems = 0
+        pcall(function()
+            currentGems = player._stats.gem_amount.Value
+        end)
+        if currentGems >= MaxGems and MaxGems > 0 then
+            sendWebhook(
+                "Gems Reached Max! (During Play)",
+                string.format("คุณ %s สะสม **%d / %d** เรียบร้อยแล้ว!\n(เช็คระหว่างเล่น)", player.Name, currentGems, MaxGems)
+            )
+            -- ถ้าไม่ต้องการให้สแปม ก็ break ออกไปเลย หรือจะรอให้ผู้เล่นเปลี่ยน MaxGems ใหม่
+            break
+        end
+    end
+end)
+
+--////////////////////////////////////////////////
+-- สคริปต์ใช้งานได้เลย
+--////////////////////////////////////////////////
