@@ -1,6 +1,7 @@
---// final_simple_immediate_check.lua
+--// final_script_immediate_webhook_ui.lua
+
 --------------------------------------------------------------------------------
--- (A) ส่ง Webhook ทันทีเมื่อสคริปต์รัน (ประกาศ Player, Gems, MaxGems ฯลฯ)
+-- (A) ส่ง Webhook ทันทีเมื่อสคริปต์รัน (Player, Gems, เป้าหมาย)
 --------------------------------------------------------------------------------
 
 if not game:IsLoaded() then
@@ -11,12 +12,14 @@ local Players    = game:GetService("Players")
 local HttpService= game:GetService("HttpService")
 local player     = Players.LocalPlayer
 
--- เปลี่ยน Webhook ตามต้องการ
+-- เปลี่ยน Webhook ตรงนี้
 _G.Webhook   = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
-local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV" -- ใช้ส่งเฉพาะเมื่อ Gems ถึงเป้า
+local WebhookEnd = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"  -- ส่งเมื่อ Gems ถึงเป้า
 
--- JSON ไฟล์
+-- ชื่อไฟล์ JSON
 local SettingsFile = "UserData.json"
+
+-- ค่าเริ่มต้น ถ้าไม่เคยมีไฟล์มาก่อน
 local DefaultData = {
     MaxGems   = 0,
     DiscordID = "",
@@ -24,17 +27,17 @@ local DefaultData = {
     IsSended  = false
 }
 
--- ฟังก์ชันอ่าน-เขียนไฟล์ (ถ้าทำได้)
+-- ฟังก์ชันอ่านไฟล์
 local function loadSettings()
     if isfile and isfile(SettingsFile) then
         local s = readfile(SettingsFile)
-        local success, data = pcall(function()
+        local ok, data = pcall(function()
             return HttpService:JSONDecode(s)
         end)
-        if success and type(data)=="table" then
+        if ok and type(data)=="table" then
             return data
         else
-            warn("ไฟล์ JSON พัง => สร้างใหม่")
+            warn("JSON พัง => สร้างใหม่")
         end
     end
     if writefile then
@@ -43,22 +46,26 @@ local function loadSettings()
     return DefaultData
 end
 
+-- ฟังก์ชันเขียนไฟล์
 local function saveSettings(tbl)
     if writefile then
         local s = HttpService:JSONEncode(tbl)
         writefile(SettingsFile, s)
     else
-        warn("Executor ไม่รองรับ writefile => saveSettings ไม่ได้")
+        warn("Executor ไม่รองรับ writefile => saveSettings ไม่ทำงาน")
     end
 end
 
+-- โหลดข้อมูล
 local LocalData = loadSettings()
+
+-- ดึงค่ามาใช้
 local MaxGems   = LocalData.MaxGems or 0
 local DiscordID = LocalData.DiscordID or ""
 local OldGems   = LocalData.OldGems or 0
 local IsSended  = LocalData.IsSended or false
 
--- รอ stats / gem_amount
+-- รอ _stats / gem_amount
 local stats = player:WaitForChild("_stats", 30)
 local gemObj = stats and stats:WaitForChild("gem_amount", 30)
 
@@ -69,7 +76,7 @@ else
     warn("ไม่พบ gem_amount => currentGems=0")
 end
 
--- ฟังก์ชันส่ง Webhook ประกาศปกติ
+-- ฟังก์ชันส่ง Webhook ปกติ
 local function sendWebhook(title, desc)
     local req = http_request or request or HttpPost or syn and syn.request
     if not req then
@@ -89,16 +96,16 @@ local function sendWebhook(title, desc)
     req({
         Url = _G.Webhook,
         Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
+        Headers = { ["Content-Type"] = "application/json" },
         Body = HttpService:JSONEncode(payload)
     })
 end
 
--- ฟังก์ชันส่ง WebhookEnd เมื่อถึงเป้า
+-- ฟังก์ชันส่ง WebhookEnd
 local function sendWebhookEnd(title, desc)
     local req = http_request or request or HttpPost or syn and syn.request
     if not req then
-        warn("ไม่มีฟังก์ชัน request => ส่ง WebhookEnd ไม่ได้")
+        warn("ไม่มีฟังก์ชัน request => WebhookEnd ไม่ได้")
         return
     end
     local payload = {
@@ -114,47 +121,35 @@ local function sendWebhookEnd(title, desc)
     req({
         Url = WebhookEnd,
         Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
+        Headers = { ["Content-Type"] = "application/json" },
         Body = HttpService:JSONEncode(payload)
     })
 end
 
 --------------------------------------------------------------------------------
--- (B) ประกาศทันทีที่รันสคริปต์ พร้อมข้อมูลปัจจุบัน
+-- (A1) ประกาศทันที (Immediate)
 --------------------------------------------------------------------------------
-
--- ประกาศผ่าน Webhook
 sendWebhook(
     "Immediate Script Run",
     string.format(
         "Player: **%s**\nGem ตอนนี้: **%d** gem\nเป้าหมาย: **%d** gem\n\n(OldGems = %d, IsSended = %s)",
-        player.Name,
-        currentGems,
-        MaxGems,
-        OldGems,
-        tostring(IsSended)
+        player.Name, currentGems, MaxGems, OldGems, tostring(IsSended)
     )
 )
 
 --------------------------------------------------------------------------------
--- (C) เช็คเงื่อนไขปรับลด MaxGems (ถ้ามีการใช้เพชร) + อัปเดต OldGems
+-- (A2) ปรับลด MaxGems ถ้าใช้เพชร + อัปเดต OldGems
 --------------------------------------------------------------------------------
-
 if currentGems < OldGems then
     local diff = OldGems - currentGems
-    LocalData.MaxGems = math.max(LocalData.MaxGems - diff, 0) -- กันติดลบ
-    print(string.format("ใช้เพชร %d => หักจาก MaxGems เหลือ %d", diff, LocalData.MaxGems))
+    LocalData.MaxGems = math.max(LocalData.MaxGems - diff, 0)
+    print(string.format("ใช้เพชร %d => MaxGems เหลือ %d", diff, LocalData.MaxGems))
 elseif currentGems > OldGems then
-    -- ถ้า Gems เพิ่ม
-    print(string.format("ได้เพชรเพิ่ม %d => OldGems from %d => %d", currentGems - OldGems, OldGems, currentGems))
+    print(string.format("ได้เพชรเพิ่ม %d => OldGems: %d -> %d", currentGems - OldGems, OldGems, currentGems))
 end
-
 LocalData.OldGems = currentGems
 
---------------------------------------------------------------------------------
--- (D) เช็คถ้า currentGems >= MaxGems และยังไม่เคยส่ง => ส่ง WebhookEnd
---------------------------------------------------------------------------------
-
+-- ถ้า currentGems >= MaxGems และยังไม่เคย IsSended => ส่ง WebhookEnd
 if currentGems >= LocalData.MaxGems
    and LocalData.MaxGems > 0
    and (not LocalData.IsSended) then
@@ -166,9 +161,80 @@ if currentGems >= LocalData.MaxGems
     LocalData.IsSended = true
 end
 
---------------------------------------------------------------------------------
--- (E) เซฟค่ากลับ JSON
---------------------------------------------------------------------------------
+-- เซฟกลับ
 saveSettings(LocalData)
 
-print("Script finished immediate check. Player:", player.Name, "Gems:", currentGems, "MaxGems:", LocalData.MaxGems)
+--------------------------------------------------------------------------------
+-- (B) สร้าง UI (Lib) ให้ปรับ MaxGems, DiscordID
+--------------------------------------------------------------------------------
+
+local RunService = game:GetService("RunService")
+local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/SinnyDEV/Lib/main/UI.lua'))()
+
+local Window = Library:CreateWindow({
+    Title    = "PLaNS x SHOP",
+    Center   = true,
+    AutoShow = true,
+})
+
+local MainTab     = Window:AddTab("PLaNS x SHOP")
+local SettingsBox = MainTab:AddLeftGroupbox("Settings")
+
+-- ใส่ Input Max Gems
+local mg = SettingsBox:AddInput('Max Gems', {
+    Numeric     = true,
+    Finished    = false,
+    Text        = 'Max Gems',
+    Placeholder = 'เป้าหมาย Gems',
+    Default     = LocalData.MaxGems
+})
+
+-- ใส่ Input Discord ID
+local di = SettingsBox:AddInput('Discord ID', {
+    Numeric     = false,
+    Finished    = false,
+    Text        = 'Discord ID',
+    Placeholder = 'ใส่ Discord ID',
+    Default     = LocalData.DiscordID
+})
+
+-- ปุ่มเซฟ
+SettingsBox:AddButton('Save Settings', function()
+    LocalData.MaxGems  = tonumber(mg.Value) or 0
+    LocalData.DiscordID= di.Value
+    LocalData.IsSended = false  -- เมื่อเปลี่ยน MaxGems หรือ DiscordID ก็รีเซ็ตการส่งได้
+
+    -- ถ้ายังไม่มี OldGems ให้ตั้งเป็น currentGems
+    if typeof(LocalData.OldGems) ~= "number" then
+        LocalData.OldGems = 0
+    end
+    if LocalData.OldGems == 0 then
+        LocalData.OldGems = currentGems
+    end
+
+    saveSettings(LocalData)
+
+    print(string.format(
+        "Saved! MaxGems=%d, DiscordID=%s, OldGems=%d, IsSended=false",
+        LocalData.MaxGems, LocalData.DiscordID, LocalData.OldGems
+    ))
+end)
+
+-- Toggle White Screen (ถ้าต้องการ)
+SettingsBox:AddLabel("Optional UI Toggles"):AddTooltip("ถ้าไม่ต้องการก็ลบได้")
+
+local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
+    Text    = 'Toggle White Screen',
+    Default = false,
+})
+WhiteScreenToggle:OnChanged(function(value)
+    -- ถ้าจะให้เซฟลง JSON ด้วย
+    -- LocalData.WhiteScreen = value
+    -- saveSettings(LocalData)
+
+    -- ตัวอย่าง: ปิด 3D Render
+    RunService:Set3dRenderingEnabled(not value)
+end)
+
+--------------------------------------------------------------------------------
+print("Script loaded: Immediate Webhook + JSON + UI")
