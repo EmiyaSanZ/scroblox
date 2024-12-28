@@ -220,6 +220,22 @@ SettingsBox:AddButton('Save Settings', function()
     ))
 end)
 
+-- ปุ่ม Test Webhook
+SettingsBox:AddButton('Test Webhook', function()
+    -- สร้างข้อความทดสอบ
+    local testDesc = string.format(
+        "Test Webhook Button Pressed!\nPlayer: %s\nCurrent Gems: %d\nMax Gems: %d",
+        player.Name,
+        currentGems,
+        LocalData.MaxGems,
+        LocalData.OldGems,
+        tostring(LocalData.IsSended)
+    )
+
+    -- เรียกฟังก์ชัน sendWebhook() เพื่อส่งทันที
+    sendWebhook("Manual Test Webhook", testDesc)
+end)
+
 -- Toggle White Screen (ถ้าต้องการ)
 SettingsBox:AddLabel("Optional UI Toggles"):AddTooltip("ถ้าไม่ต้องการก็ลบได้")
 
