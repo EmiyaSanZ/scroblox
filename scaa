@@ -14,7 +14,7 @@ local player     = Players.LocalPlayer
 
 -- เปลี่ยน Webhook ตรงนี้
 _G.Webhook   = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
-local WebhookEnd = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"  -- ส่งเมื่อ Gems ถึงเป้า
+local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"  -- ส่งเมื่อ Gems ถึงเป้า
 
 -- ชื่อไฟล์ JSON
 local SettingsFile = "UserData.json"
