@@ -120,7 +120,7 @@ local function sendWebhookEnd(title, desc)
         return
     end
     local payload = {
-        content = "<@"..DiscordID..">",
+        content = "<@"..DiscordID.."> <@1014729882833539132>",
         embeds = {
             {
                 title = title,
