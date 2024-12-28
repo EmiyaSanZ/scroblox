@@ -1,309 +1,651 @@
--- // final_script.lua
+repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("spawn_units")
+repeat wait() until game.Players.LocalPlayer:FindFirstChild("_stats")
 
---==========================================================
---== ส่วนที่ 1: ตั้งค่าพื้นฐาน และประกาศตัวแปรสำคัญ  ==
---==========================================================
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
+local FolderPath = "CustomerData"
+local SettingsPath = "CustomerSettings"
 
--- ประกาศโฟลเดอร์ / ไฟล์ที่จะใช้เก็บข้อมูล
-local FolderPath = "CustomerData"            -- เก็บข้อมูลหลัก (Webhook, Max Gems ฯลฯ)
-local SettingsPath = "CustomerSettings"       -- เก็บค่าจอขาว (White Screen) หรืออื่น ๆ
-local FileName = game.Players.LocalPlayer.Name..".json"  -- ชื่อไฟล์ตามชื่อตัวละคร
-local FullDataPath = FolderPath.."\\"..FileName
-local FullSettingsPath = SettingsPath.."\\"..FileName
-
--- ประกาศตัวแปร Webhook
-_G.Webhook = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
+local Webhook = nil
+local ThumbnailURL = nil
 
--- โหลด Service
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local player = Players.LocalPlayer
+local DiscordID = nil
+local MaxGems = nil
+local OldGems = nil
+local IsSended = false
 
---==========================================================
---== ส่วนที่ 2: ตรวจสอบโฟลเดอร์/ไฟล์ และประกาศฟังก์ชัน ==
---==========================================================
--- ตรวจสอบว่าฟังก์ชันใน Executor ทำงานได้ไหม (isfolder, makefolder ฯลฯ)
-local function SafeIsFolder(path)
-    local success, res = pcall(function()
-        return isfolder(path)
-    end)
-    return (success and res) or false
+local WhiteScreen = false
+
+function GetCurrentLevel()
+    local LevelText = Level
+    return string.gsub(LevelText, "Level ", "")
 end
-local function SafeMakeFolder(path)
-    pcall(function()
-        makefolder(path)
-    end)
-end
-local function SafeIsFile(path)
-    local success, res = pcall(function()
-        return isfile(path)
-    end)
-    return (success and res) or false
+function GetNumberFromString(S)
+    return string.match(S,"%d+")
 end
 
--- ถ้าไม่มีโฟลเดอร์ ให้สร้าง
-if not SafeIsFolder(FolderPath) then
-    SafeMakeFolder(FolderPath)
+if not (isfolder(FolderPath)) then
+    makefolder(FolderPath)
 end
-if not SafeIsFolder(SettingsPath) then
-    SafeMakeFolder(SettingsPath)
+if not (isfolder(SettingsPath)) then
+    makefolder(SettingsPath)
 end
-
--- ฟังก์ชันโหลดข้อมูลจากไฟล์ JSON ใน FolderPath
-local function LoadData()
-    if SafeIsFile(FullDataPath) then
-        local content = readfile(FullDataPath)
-        -- ป้องกันไฟล์ JSON เสีย (ลอง decode ก่อน)
-        local success, data = pcall(function()
-            return HttpService:JSONDecode(content)
-        end)
-        if success and type(data)=="table" then
-            return data
-        else
-            -- ถ้าพัง ให้สร้างใหม่ด้วย Default
-            warn("JSON Decode Error (Data File). Creating default JSON.")
-        end
-    end
-    -- Default ถ้าไฟล์ไม่มีหรืออ่านไม่ได้
-    local default = {
-        ["Webhook"] = _G.Webhook,
-        ["Max Gems"] = 0,
-        ["Discord ID"] = "",
-        ["Is Sended"] = false,
-        ["Old Gems"] = 0
-    }
-    writefile(FullDataPath, HttpService:JSONEncode(default))
-    return default
-end
-
--- ฟังก์ชันบันทึกข้อมูล
-local function SaveData(tbl)
-    writefile(FullDataPath, HttpService:JSONEncode(tbl))
-end
-
--- โหลดข้อมูลตั้งค่า
-local Data = LoadData()
-local Webhook = Data["Webhook"]
-local MaxGems = tonumber(Data["Max Gems"]) or 0
-local DiscordID = Data["Discord ID"]
-local OldGems = tonumber(Data["Old Gems"]) or 0
-local IsSended = Data["Is Sended"] or false
-
--- ฟังก์ชันโหลด/บันทึกค่า WhiteScreen (SettingsPath)
-local function LoadWhiteScreen()
-    if SafeIsFile(FullSettingsPath) then
-        local c = readfile(FullSettingsPath)
-        local success, sdata = pcall(function()
-            return HttpService:JSONDecode(c)
-        end)
-        if success and type(sdata)=="table" and sdata["White Screen"]~=nil then
-            return sdata["White Screen"]
-        end
-    end
-    return false -- default
-end
-local function SaveWhiteScreen(value)
-    writefile(FullSettingsPath, HttpService:JSONEncode({
-        ["White Screen"] = value
+if not (isfile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name..".json")) then
+    writefile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode({
+        ["White Screen"] = false
     }))
 end
 
-local WhiteScreen = LoadWhiteScreen()
+local ThumbnailRequest = http.request(
+    {
+        Url = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..tostring(game.Players.LocalPlayer.UserId).."&size=420x420&format=Png&isCircular=false",
+        Method = "GET",
+        Headers = {
+            ["Content-Type"] = "application/json"
+        },
+    }
+)
+ThumbnailURL = (game:GetService("HttpService"):JSONDecode(ThumbnailRequest.Body))["data"][1]["imageUrl"]
+print(ThumbnailURL)
 
---==========================================================
---== ส่วนที่ 3: สร้าง GUI สำหรับตั้งค่า (Webhook, MaxGems, DiscordID, WhiteScreen)
---==========================================================
-local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/SinnyDEV/Lib/main/UI.lua'))()
+if isfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json") then    
+    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+    OldGems = data["Old Gems"]
+    MaxGems = data["Max Gems"] 
+    Webhook = data["Webhook"]
+    DiscordID = data["Discord ID"]
+    IsSended = data["Is Sended"]
+
+end
+if isfile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name..".json") then    
+    local data = game.HttpService:JSONDecode(readfile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name..".json")) 
+    WhiteScreen = data["White Screen"]
+end
+    if Webhook and WebhookEnd then
+            if game.PlaceId == 8304191830 then
+                -- // Claim Gift \\ --
+                game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_daily_reward:InvokeServer()
+                game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_christmas_calendar_reward:InvokeServer()
+                game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_battlepass_rewards:InvokeServer() 
+
+                -- // Check Gems \\ --
+                local currentgem = game.Players.LocalPlayer["_stats"]["gem_amount"].Value
+                if OldGems then
+                    if currentgem < OldGems then
+                        local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                        data["Max Gems"] = MaxGems-(tonumber(GetNumberFromString(OldGems))-tonumber(GetNumberFromString(currentgem)))
+                        data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                        
+                        MaxGems = MaxGems-(tonumber(GetNumberFromString(OldGems))-tonumber(GetNumberFromString(currentgem)))
+                    else
+                        local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                        data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                    end
+                else
+                    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                    data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                    writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                end
+
+
+                -- // Send Webhook When Gems Reach The Max \\ --
+                if game.Players.LocalPlayer["_stats"]["gem_amount"].Value >= tonumber(GetNumberFromString(MaxGems)) and IsSended == false then
+                    IsSended = true
+                    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                    data["Is Sended"] = true
+                    writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                    local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+                    function GetCurrentLevel()
+                        local LevelText = Level
+                        return string.gsub(LevelText, "Level ", "")
+                    end
+                    local descriptionend = "**𝐍𝐀𝐌𝐄 :** ||%s||\n**💎・𝐆𝐄𝐌𝐒 : %s**\n**<a:2891bitcoin:1021469261274824764>・𝐆𝐎𝐋𝐃 : %s**\n**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・𝐋𝐞𝐯𝐞𝐥 : %s**\n\nอย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"
+                    http.request(
+                        {
+                            Url = WebhookEnd,
+                            Method = "POST",
+                            Headers = {
+                                ["Content-Type"] = "application/json"
+                            },
+                            Body = game:GetService("HttpService"):JSONEncode(
+                                {
+                                    ["content"] = "<@"..tostring(DiscordID).."> <@ & 1006505817769521177>",
+                                    ["embeds"] = {
+                                        {
+                                            ["title"] = "**ฟามเสร็จแล้วเปลี่ยนรหัสได้เลย! <a:6157gawrgurapopcorn:1019689697590648973>**",
+                                            ["description"] = string.format(
+                                                descriptionend,
+                                                game.Players.LocalPlayer.Name,
+                                                tostring(game.Players.LocalPlayer["_stats"]["gem_amount"].Value).." / "..tostring(MaxGems),
+                                                tostring(game.Players.LocalPlayer["_stats"]["gold_amount"].Value),
+                                                tostring(GetCurrentLevel())                                                             
+                                            ),
+                                            ["type"] = "rich",   
+                                            ["color"] = tonumber(0xFF1493),
+                                            ["footer"] = {
+                                                ["text"] = "PLaNS SHOP ",
+                                                ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                            },
+                                            ["thumbnail"] = {
+                                                ["url"] = ""
+                                            },
+                                            ["image"] = {
+                                                ["url"] = ThumbnailURL
+                                            },
+                                            ["timestamp"] = DateTime.now():ToIsoDate(),
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    )
+                end
+
+                local description = " ———————————————\n**ข้อมูลผู้เล่น** ≧▽≦ <a:3018pinkheart:1019689700224684122>\n\n**Name: **||%s||\n**เพชร : ** **%s <a:8865diamond:1047145579790221433>**\n**ทอง : ** **%s <a:2891bitcoin:1021469261274824764>**\n%s <a:5622bloodpotion:1047140829703180298> \n———————————————\n**EXP จากด่าน** <:4026pridepotion:1047140826897203311>"
+                
+                local ResultValue = {
+                    ["Gem"] = game.Players.LocalPlayer["_stats"]["gem_amount"].Value,
+                    ["gold"] = game.Players.LocalPlayer["_stats"]["gold_amount"].Value,
+                    ["Level"] = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text,  
+                    ["star"] = "0x" ,
+                    ["clover stone"] = "0x" ,
+                    ["Star Remnant"] = "0x",
+                    ["Summon Ticket"] = "0x",
+                    ["Luck Potion"] = "0x",
+                    ["Rikugan Eye"] = "0x",
+                }
+
+            
+                description = description.."\n"
+                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "senzu") and string.find(string.lower(v.Name), "bean") then
+                        description = description..("<:Senzu_Bean:1042741743612862465>**・**ถั่วเขียว  : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "aot") and string.find(string.lower(v.Name), "fluid") then
+                        description = description..("<:Mysterious_Fluid:1042741739808636928>**・**ไขสันหลังไททัน : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "wisteria") and string.find(string.lower(v.Name), "flower") then
+                        description = description..("<:Wisteria_Flower:1042741748922843136>**・**ดอกฟูจิ : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "ramen") and string.find(string.lower(v.Name), "xp") then
+                        description = description..("<:Ramen_Bowl:1042741742002257931>**・**ราเม็ง : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "xp_devil") and string.find(string.lower(v.Name), "fruit") then
+                        description = description..("<:Devil_Fruit:1042741732388917288>**・**ผลปีศาจ : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "coffee") then
+                        description = description..("☕️**・**กาแฟ : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "soul") and string.find(string.lower(v.Name), "candy") then
+                        description = description..("<:Soul_Candy:1042741746980900894>**・**ลูกกวาดวิญญาณ : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "hxh") and string.find(string.lower(v.Name), "fish") then
+                        description = description..("<:Cooked_Fish:1042741727632568340>**・**ปลาย่าง : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fairy") and string.find(string.lower(v.Name), "exp") then
+                        description = description..("<:Magical_Artifact:1042741736998453310>**・**แฟรี่ : "..v.OwnedAmount.Text.."\n")
+                    end 
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "jjk") and string.find(string.lower(v.Name), "talisman") then
+                        description = description..("<:Curse_Talisman:1042741729654218783>**・**ผ้ายันต์ : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "jojo") and string.find(string.lower(v.Name), "pendant") then
+                        description = description..("<:Stone_Pendant:1075383093738864671>**・**สร้อยโจโจ้ : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "opm") and string.find(string.lower(v.Name), "core") then
+                        description = description..("<:Alien_Core:1075383091440390225>**・**คอร์เอเลี่ยน : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find((v.Name), "quirk_shard") then
+                        description = description..("<:Quirk_Shard:1094449189552918708>**・**เศษเสี้ยว : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find((v.Name), "7ds_pie") then
+                        description = description..("<:7ds_Pie:1094452930607841340>**・**พาย : "..v.OwnedAmount.Text.."\n")
+                    end       
+                end 
+                description = description.."<:Magic_Stone:1042741693755170847>**・**หินสีฟ้า(EXP) : %s\n"
+            
+                description = description.."———————————————\n**Raid item**  <:Awakened_Triple_Tomoe:1094459826995740672>\n"
+                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
+                    if v:IsA("ImageButton") and string.find((v.Name), "uchiha_") and string.find(string.lower(v.Name), "item") then
+                        description = description..("<:Tomoe:1094340509851455569>**・**tomoe  : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find((v.Name), "west_city_frieza_item") then
+                        description = description..("<:scouter:1088731891680682094>**・**Alien Scouter : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find((v.Name), "relic_shard") then
+                        description = description..("<:Relic_Shard:1094340507838189719>**・**relic shard : "..v.OwnedAmount.Text.."\n")
+                    end
+                end
+    
+                description = description.."———————————————\n**Portal ประตูลับ** <a:HGWS_87:1054831644781051974>\n"
+                portal_boros = 0
+                portal_zeldris = 0 
+                april_portal_item = 0
+
+                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
+                    --if v:IsA("ImageButton") and string.find(string.lower(v.Name), "portal_boros") and string.find(string.lower(v.Name), "g") then
+                    --portal_boros = (GetNumberFromString(portal_boros) + (GetNumberFromString(v.OwnedAmount.Text)))                        
+                    --end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "portal_zeldris") then
+                        portal_zeldris = (tonumber(GetNumberFromString(portal_zeldris)) + (tonumber(GetNumberFromString(v.OwnedAmount.Text))))                        
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "april_portal") and string.find(string.lower(v.Name), "_item") then
+                        april_portal_item = (tonumber(GetNumberFromString(april_portal_item)) + (tonumber(GetNumberFromString(v.OwnedAmount.Text))))                        
+                    end                
+                end
+                description = description..("<:alien_portal:1069655711899983953>**・**ประตูโบรอส : x"..portal_boros.."\n")
+                description = description..("<:portal_zeldris:1094458475477733478>**・**ประตู7บาป : x"..portal_zeldris.."\n")
+               
+            
+                description = description.."———————————————\n**Star Fruits**  <a:8699rightrainbowstar:1054740408434966588>\n"
+            
+                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "epic") then
+                        description = description..("<:Star_Fruit_29:1042744858080706600>**・**ดาวสีรุ้ง  : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "blue") then
+                        description = description..("<:Star_Fruit_2999:1042744862950293636>**・**ดาวสีน้ำเงิน : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "red") then
+                        description = description..("<:Star_Fruit_299:1042744860395962430>**・**ดาวสีแดง : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "pink") then
+                        description = description..("<:Star_Fruit_Pink:1042744853777350686>**・**ดาวสีชมพู : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find(string.lower(v.Name), "fruit") and string.find(string.lower(v.Name), "green") then
+                        description = description..("<:Star_Fruit_2:1042744855811596368>**・**ดาวสีเขียว : "..v.OwnedAmount.Text.."\n")
+                    end
+                end
+                description = description.."<:Star_Fruit:1042744851776667658>**・**ดาวสีเหลือง : %s\n"                 
+                description = description.."———————————————\n**ไอเท็มอื่นๆ <a:espada:1047145577223295048> **\n"                          
+                for i,v in pairs(game:GetService("ReplicatedStorage")["_FX_CACHE"]:GetChildren()) do
+                    if v:IsA("ImageButton") and string.find((v.Name), "star_remnant") then
+                        description = description..("<:Star_Remnant:1042744865202634752>**・**Star Remnant  : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find((v.Name), "LuckPotion") then
+                        description = description..("<:Luck_Potion:1042745802130456647>**・**Luck Potion : "..v.OwnedAmount.Text.."\n")
+                    end
+                    if v:IsA("ImageButton") and string.find((v.Name), "summon_ticket") then
+                        description = description..("<:Summon_Ticket:1042744868004429854>**・**Summon Ticket : "..v.OwnedAmount.Text.."\n")
+                    end                   
+                end
+                description = description.."<:Rikugan_Eye:1042744849532723210>**・**ดวงตาโกโจ : %s\n"
+                
+                
+                if game:GetService("ReplicatedStorage")["_FX_CACHE"]:FindFirstChild("StarFruit") then
+                    ResultValue["star"] = game:GetService("ReplicatedStorage")["_FX_CACHE"]["StarFruit"].OwnedAmount.Text
+                end
+                if game:GetService("ReplicatedStorage")["_FX_CACHE"]:FindFirstChild("black_clover_stone") then
+                    ResultValue["clover stone"] = game:GetService("ReplicatedStorage")["_FX_CACHE"]["black_clover_stone"].OwnedAmount.Text
+                end                  
+                if game:GetService("ReplicatedStorage")["_FX_CACHE"]:FindFirstChild("six_eyes") then
+                    ResultValue["Rikugan Eye"] = game:GetService("ReplicatedStorage")["_FX_CACHE"]["six_eyes"].OwnedAmount.Text
+                end
+
+                http.request(
+                    {
+                        Url = Webhook,
+                        Method = "POST",
+                        Headers = {
+                            ["Content-Type"] = "application/json"
+                        },
+                        Body = game:GetService("HttpService"):JSONEncode(
+                            {
+                                ["content"] = "",
+                                ["embeds"] = {
+                                    {
+                                        ["title"] = "**✨ PLaNS SHOP ✨**",
+                                        ["description"] = string.format(
+                                            description,
+                                            game.Players.LocalPlayer.Name,
+                                            ResultValue["Gem"].." / "..MaxGems,
+                                            ResultValue["gold"],
+                                            ResultValue["Level"],
+                                            ResultValue["star"],
+                                            ResultValue["clover stone"],
+                                            ResultValue["Star Remnant"],
+                                            ResultValue["Summon Ticket"],
+                                            ResultValue["Luck Potion"],
+                                            ResultValue["Rikugan Eye"]                         
+                                        ),
+                                        ["type"] = "rich",   
+                                        ["color"] = tonumber(0xFF1493),
+                                        ["footer"] = {
+                                            ["text"] = "PLaNS SHOP ",
+                                            ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                        },
+                                        ["thumbnail"] = {
+                                            ["url"] = ThumbnailURL
+                                        },                      
+                                        ["timestamp"] = DateTime.now():ToIsoDate(),
+                                    }
+                                }
+                            }
+                        )
+                    }
+                )
+                http.request(
+                    {
+                        Url = Webhook,
+                        Method = "POST",
+                        Headers = {
+                            ["Content-Type"] = "application/json"
+                        },
+                        Body = game:GetService("HttpService"):JSONEncode(
+                            {
+                                ["content"] = "",
+                                ["embeds"] = {
+                                    {
+                                        ["title"] = "**✨ PLaNS SHOP ✨**",
+                                        ["description"] = "**ID: ||"..game.Players.LocalPlayer.Name.."||**\n<a:6132lightblueheartspin:1021711798203846717> แจ้งเตือนสถานะ \n<a:alert:1021734820461674527> เล่นจบแล้วตอนนี้อยู่ในล็อบบี้ (ห้ามเข้ารหัสตอนนี้<a:4398qiqispin:1019693775515295824>)",
+                                        ["type"] = "rich",   
+                                        ["color"] = tonumber(0xff0000),
+                                        ["footer"] = {
+                                            ["text"] = "PLaNS SHOP ",
+                                            ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                        },
+                                        ["thumbnail"] = {
+                                            ["url"] = ThumbnailURL
+                                        },
+                                        ["timestamp"] = DateTime.now():ToIsoDate(),
+                                    }
+                                }
+                            }
+                        )
+                    }
+                )
+    elseif game.PlaceId == 8349889591 then
+        -- // Send Webhook When Gems Reach The Max \\ --
+        if game.Players.LocalPlayer["_stats"]["gem_amount"].Value >= tonumber(MaxGems) and IsSended == false then
+            print("gem reach")
+            IsSended = true
+            local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+            data["Is Sended"] = true
+            writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+            local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+            function GetCurrentLevel()
+                local LevelText = Level
+                return string.gsub(LevelText, "Level ", "")
+            end
+            local descriptionend = "**𝐍𝐀𝐌𝐄 :** ||%s||\n**💎・𝐆𝐄𝐌𝐒 : %s**\n**<a:2891bitcoin:1021469261274824764>・𝐆𝐎𝐋𝐃 : %s**\n**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・𝐋𝐞𝐯𝐞𝐥 : %s**\n\nอย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"
+            http.request(
+                {
+                    Url = WebhookEnd,
+                    Method = "POST",
+                    Headers = {
+                        ["Content-Type"] = "application/json"
+                    },
+                    Body = game:GetService("HttpService"):JSONEncode(
+                        {
+                            ["content"] = "<@"..tostring(DiscordID).."> <@&1006505817769521177>",
+                            ["embeds"] = {
+                                {
+                                    ["title"] = "**ฟามเสร็จแล้วเปลี่ยนรหัสได้เลย! <a:6157gawrgurapopcorn:1019689697590648973>**",
+                                    ["description"] = string.format(
+                                        descriptionend,
+                                        game.Players.LocalPlayer.Name,
+                                        tostring(game.Players.LocalPlayer["_stats"]["gem_amount"].Value).." / "..tostring(MaxGems),
+                                        tostring(game.Players.LocalPlayer["_stats"]["gold_amount"].Value),
+                                        tostring(GetCurrentLevel())
+                                    ),
+                                    ["type"] = "rich",   
+                                    ["color"] = tonumber(0xFF1493),
+                                    ["footer"] = {
+                                        ["text"] = "PLaNS SHOP ",
+                                        ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                    },
+                                    ["thumbnail"] = {
+                                        ["url"] = ""
+                                    },
+                                    ["image"] = {
+                                        ["url"] = ThumbnailURL
+                                    },
+                                    ["timestamp"] = DateTime.now():ToIsoDate(),
+                                }
+                            }
+                        }
+                    )
+                }
+            )
+        end
+
+        http.request(
+            {
+                Url = Webhook,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = game:GetService("HttpService"):JSONEncode(
+                    {
+                        ["content"] = "",
+                        ["embeds"] = {
+                            {
+                                ["title"] = "**✨ PLaNS SHOP ✨**",
+                                ["description"] = "**ID: ||"..game.Players.LocalPlayer.Name.."||**\n<a:6132lightblueheartspin:1021711798203846717> แจ้งเตือนสถานะ \n<a:7131discordverifygreen:1019693746998218804> ตอนนี้กำลังฟามแล้วนะ ✦",
+                                ["type"] = "rich",   
+                                ["color"] = tonumber(0x55FF66),
+                                ["footer"] = {
+                                    ["text"] = "PLaNS SHOP ",
+                                    ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                },
+                                ["thumbnail"] = {
+                                    ["url"] = ThumbnailURL
+                                },
+                                ["timestamp"] = DateTime.now():ToIsoDate(),
+                            }
+                        }
+                    }
+                )
+            }
+        )
+        -- // Check Gems \\ --
+        local currentgem = game.Players.LocalPlayer["_stats"]["gem_amount"].Value
+        if OldGems then
+            if currentgem < OldGems then
+                local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                data["Max Gems"] = MaxGems-(tonumber(GetNumberFromString(OldGems))-tonumber(GetNumberFromString(currentgem)))
+                data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                
+                MaxGems = MaxGems-(tonumber(GetNumberFromString(OldGems))-tonumber(GetNumberFromString(currentgem)))
+            else
+                local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+            end
+        else
+            local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+            data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+            writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+        end
+
+        local description = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level: %s```\n```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficuty : %s\n- Wave : %s | %s```\n```md\n#Enemies Killed\n- %d```\n```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n```เพชรรวม・%s💎```"
+    
+        game:GetService("Workspace")["_DATA"].GameFinished.Changed:Connect(function()
+            if game:GetService("Workspace")["_DATA"].GameFinished.Value == true then
+                local currentgem = game.Players.LocalPlayer["_stats"]["gem_amount"].Value
+                if OldGems then
+                    if currentgem < OldGems then
+                        local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                        data["Max Gems"] = MaxGems-(tonumber(GetNumberFromString(OldGems))-tonumber(GetNumberFromString(currentgem)))
+                        data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                        
+                        MaxGems = MaxGems-(tonumber(GetNumberFromString(OldGems))-tonumber(GetNumberFromString(currentgem)))
+                    else
+                        local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                        data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                    end
+                else
+                    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+                    data["Old Gems"] = tonumber(GetNumberFromString(currentgem))
+                    writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+                end
+
+                local button = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.Buttons.Next
+                local AllItem = ""
+                game:GetService("Players").LocalPlayer.PlayerGui.HatchInfo.holder.info1.UnitName:GetPropertyChangedSignal("Text"):Connect(function()
+                    local ItemName = game:GetService("Players").LocalPlayer.PlayerGui.HatchInfo.holder.info1.UnitName.Text
+                    AllItem = AllItem.."◈ "..ItemName.."\n"
+                end)
+                repeat
+                    spawn(function()
+                        for i,v in pairs(getconnections(button.Activated)) do
+                            v:Fire()
+                        end
+                    end)              
+                wait(0.5)              
+                until string.find(game:GetService("Players").LocalPlayer.PlayerGui.HatchInfo.holder.info1.UnitName.Text, "x")
+                local Player = game:GetService("Players").LocalPlayer
+                local Character = Player.Character
+                local PlayerGui = Player.PlayerGui 
+                local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+                local Gem = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
+                local GemPath = Player["_stats"]["gem_amount"]
+                local GoldPath = Player["_stats"]["gold_amount"]
+                local XP = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text
+                local Map = tostring(game:GetService("Players").LocalPlayer.PlayerGui.NewArea.holder.areaTitle.Text).." : "..game:GetService("Players").LocalPlayer.PlayerGui.NewArea.holder.areaDescription.Text
+                local TitlePath = PlayerGui.NewArea.holder.areaTitle
+                local DescriptionPath = PlayerGui.NewArea.holder.areaDescription
+                local WaveCompleted = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.Middle.WavesCompleted.Text
+                local TimeCompleted = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.Middle.Timer.Text
+                local TotalGems = game:GetService("Players").LocalPlayer["_stats"]["gem_amount"].Value
+                local DifficultyPath = PlayerGui.NewArea.holder.Difficulty.Text
+                local InfoGameEnd = Player.PlayerGui.ResultsUI.Holder.Title.Text
+                local KillsInGame = Player["_stats"].kills.Value
+                local DMGsInGane = Player["_stats"]["damage_dealt_claimed"] 
+                function GetCurrentLevel()
+                    local LevelText = Level
+                    return string.gsub(LevelText, "Level ", "")
+                end
+                function GetNumberFromString(S)
+                    return string.match(S,"%d+")
+                end
+
+    
+                http.request(
+                    {
+                        Url = Webhook,
+                        Method = "POST",
+                        Headers = {
+                            ["Content-Type"] = "application/json"
+                        },
+                        Body = game:GetService("HttpService"):JSONEncode(
+                            {
+                                ["content"] = "",
+                                ["embeds"] = {
+                                    {
+                                        ["title"] = "**<:9796zerogasm:1036348241656164394> PLaNS SHOP**",
+                                        ["description"] = string.format(
+                                            description,
+                                            game.Players.LocalPlayer.Name,
+                                            GemPath.Value,
+                                            GoldPath.Value,
+                                            GetCurrentLevel(),
+                                            InfoGameEnd,
+                                            Map,
+                                            DifficultyPath,
+                                            GetNumberFromString(WaveCompleted),
+                                            TimeCompleted,
+                                            KillsInGame,
+                                            Gem.." Gems",
+                                            XP,
+                                            AllItem,
+                                            TotalGems.." / "..tostring(MaxGems).." Gems"
+                                        ),
+                                        ["type"] = "rich",
+                                        ["color"] = tonumber(0x33FFCC),
+                                        ["footer"] = {
+                                            ["text"] = "PLaNS SHOP ",
+                                            ["icon_url"] = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                        },
+                                        ["thumbnail"] = {
+                                            ["url"] = ""
+                                        },
+                                        ["timestamp"] = DateTime.now():ToIsoDate(),
+                                    }
+                                }
+                            }
+                        )
+                    }
+                )
+            end
+        end)
+    end
+end
+
+local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI.lua'))()
 local Window = Library:CreateWindow({
     Title = "PLaNS x SHOP",
     Center = true, 
     AutoShow = true,
 })
 
-local Tabs = Window:AddTab("PLaNS x SHOP")
-local GroupBox = Tabs:AddLeftGroupbox("Settings")
+local Tabs = Window:AddTab('PLaNS x SHOP')
+local GroupBox = Tabs:AddLeftGroupbox('Settings')
 
--- Toggle White Screen
-local WhiteScreenToggle = GroupBox:AddToggle('White Screen', {
+local whitescreen = GroupBox:AddToggle('White Screen', {
     Text = 'Toggle White Screen',
     Default = WhiteScreen,
 })
-WhiteScreenToggle:OnChanged(function(value)
+whitescreen:OnChanged(function(value)
     WhiteScreen = value
-    SaveWhiteScreen(value)
-    RunService:Set3dRenderingEnabled(not value)  -- ถ้าเปิด White Screen = true => ปิด 3D Render
+    writefile(SettingsPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode({
+        ["White Screen"] = WhiteScreen
+    }))
+    if value == true then
+        game:GetService("RunService"):Set3dRenderingEnabled(false)
+    else
+        game:GetService("RunService"):Set3dRenderingEnabled(true)
+    end
 end)
 
--- ช่องกรอก Webhook
+
 local wh = GroupBox:AddInput('Webhook', {
     Numeric = false,
     Finished = false,
     Text = 'Webhook',
     Placeholder = 'Webhook Here!',
-    Default = Webhook or ""
 })
 
--- ช่องกรอก Max Gems
 local mg = GroupBox:AddInput('Max Gems', {
     Numeric = true, 
     Finished = false, 
     Text = 'Max Gems',
     Placeholder = 'Max Gems Here!',
-    Default = MaxGems
 })
 
--- ช่องกรอก Discord ID
 local di = GroupBox:AddInput('Discord ID', {
-    Numeric = false,  -- บางครั้งมีตัวอักษร (เช่น mention) ก็ได้
+    Numeric = false, 
     Finished = false, 
     Text = 'Discord ID',
     Placeholder = 'Discord ID Here!',
-    Default = DiscordID or ""
 })
 
--- ปุ่มเซฟ
+if isfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json") then 
+    local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))
+    wh:SetValue(data["Webhook"])
+    mg:SetValue(data["Max Gems"])
+    di:SetValue(data["Discord ID"])
+end
+
 GroupBox:AddButton('Save Settings', function()
-    Data["Webhook"] = wh.Value
-    Data["Max Gems"] = mg.Value
-    Data["Discord ID"] = di.Value
-    Data["Is Sended"] = false  -- รีเซ็ตเสมอ เมื่อเปลี่ยนค่า
-    SaveData(Data)
-
-    Webhook = Data["Webhook"]
-    MaxGems = tonumber(Data["Max Gems"]) or 0
-    DiscordID = Data["Discord ID"]
-    IsSended = false
-
-    print("Saved Settings!\nWebhook =", Webhook, "\nMaxGems =", MaxGems, "\nDiscordID =", DiscordID)
-end)
-
-
---==========================================================
---== ส่วนที่ 4: ฟังก์ชันส่ง Webhook (ปกติ) และ WebhookEnd (ถึงเป้า)
---==========================================================
-local function sendWebhookNormal(title, description)
-    local requestFunc = syn and syn.request or http_request or request
-    if not requestFunc then
-        warn("No request function found! (Webhook Normal)")
-        return
-    end
-    local dataPayload = {
-        ["content"] = "",
-        ["embeds"] = {
-            {
-                ["title"] = title,
-                ["description"] = description,
-                ["color"] = 0x00FF99
-            }
-        }
-    }
-    requestFunc({
-        Url = Webhook,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = HttpService:JSONEncode(dataPayload)
-    })
-end
-
-local function sendWebhookEnd(title, description)
-    local requestFunc = syn and syn.request or http_request or request
-    if not requestFunc then
-        warn("No request function found! (WebhookEnd)")
-        return
-    end
-    local dataPayload = {
-        ["content"] = "<@"..(DiscordID or "")..">", -- mention
-        ["embeds"] = {
-            {
-                ["title"] = title,
-                ["description"] = description,
-                ["color"] = 0xFF1493
-            }
-        }
-    }
-    requestFunc({
-        Url = WebhookEnd,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = HttpService:JSONEncode(dataPayload)
-    })
-end
-
---==========================================================
---== ส่วนที่ 5: เช็ก Gems + Handle จบเกม (GameFinished)
---==========================================================
--- รอจนกว่าจะมี _DATA.GameFinished
-local GameFinished = nil
-pcall(function()
-    GameFinished = workspace._DATA:WaitForChild("GameFinished")
-end)
-
--- อัพเดต OldGems เริ่มต้น ถ้าจำเป็น
-if OldGems <= 0 then
-    pcall(function()
-        OldGems = player._stats.gem_amount.Value
-        Data["Old Gems"] = OldGems
-        SaveData(Data)
-    end)
-end
-
--- ฟังก์ชันเช็ค Gems >= MaxGems แล้วส่ง WebhookEnd (ถ้ายังไม่เคยส่ง)
-local function CheckGems()
-    local currentGems = 0
-    pcall(function()
-        currentGems = player._stats.gem_amount.Value
-    end)
-    -- อัปเดต OldGems ถ้ามีการเพิ่มขึ้น
-    if currentGems ~= OldGems then
-        OldGems = currentGems
-        Data["Old Gems"] = OldGems
-        SaveData(Data)
-    end
-
-    if currentGems >= MaxGems and MaxGems > 0 and (not IsSended) then
-        -- ส่ง WebhookEnd แค่ครั้งเดียว
-        sendWebhookEnd(
-            "Gems Reached Max!",
-            string.format("**%s** ได้เก็บสะสม **%d / %d** Gems แล้ว!\nขอบคุณที่ใช้บริการน้า ❤", player.Name, currentGems, MaxGems)
-        )
-        IsSended = true
-        Data["Is Sended"] = true
-        SaveData(Data)
-    end
-end
-
---== 5.1) เช็คเป็นระยะ ๆ ระหว่างเล่น
-spawn(function()
-    while true do
-        wait(10)
-        CheckGems()
+    if isfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json") then 
+        local data = game.HttpService:JSONDecode(readfile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json"))    
+        data["Max Gems"] = mg.Value 
+        data["Webhook"] = wh.Value
+        data["Discord ID"] = di.Value
+        data["Is Sended"] = false
+        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode(data))
+    else
+        writefile(FolderPath..[[\]]..game.Players.LocalPlayer.Name..".json", game.HttpService:JSONEncode({
+            ["Webhook"] = wh.Value,
+            ["Max Gems"] = mg.Value,
+            ["Discord ID"] = di.Value,
+            ["Is Sended"] = false,
+            ["Old Gems"] = false,
+        }))
     end
 end)
-
---== 5.2) ถ้าในเกมมี GameFinished ให้แจ้งตอนจบเกม
-if GameFinished then
-    GameFinished.Changed:Connect(function()
-        if GameFinished.Value == true then
-            -- ส่ง Webhook ปกติ บอกว่าจบเกม
-            local currentGems = 0
-            pcall(function()
-                currentGems = player._stats.gem_amount.Value
-            end)
-            sendWebhookNormal(
-                "End Game Info",
-                string.format("Player: **%s**\nGems Now: **%d** (Goal: %d)", player.Name, currentGems, MaxGems)
-            )
-            -- แล้วเช็ค Gems ถึง Max หรือยัง
-            CheckGems()
-        end
-    end)
-else
-    warn("GameFinished not found. (If you're in lobby or a different place, it's OK.)")
-end
-
-print("PLaNS x SHOP script loaded successfully!")
