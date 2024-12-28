@@ -250,7 +250,7 @@ SettingsBox:AddButton('Test Webhook', function()
         LocalData.MaxGems,
         LocalData.AddGemsWanted
     )
-    sendWebhook("ทดสอบแจ้งเตือนๆ", testDesc)
+    sendWebhook("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testDesc)
 end)
 
 -- Toggle White Screen (ถ้าต้องการ)
