@@ -1,99 +1,37 @@
---// ultimate_fix.lua
-
---############################################################
--- (1) ตั้งค่าพื้นฐาน
---############################################################
+--// no_file_simple.lua
+--#####################################################
+--  ส่วนที่ 1: ตั้งค่าพื้นฐาน
+--#####################################################
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+-- ตัวแปร Webhook หลัก (ใช้แจ้งข้อมูลปกติ เช่น จบเกม ฯลฯ)
+_G.Webhook = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
+
+-- ตัวแปร WebhookEnd (ใช้แจ้งเตือนเมื่อ Gems ถึง Max)
+local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
+
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
--- ประกาศ Webhook (แก้เป็นของคุณ)
-_G.Webhook = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
-local WebhookEnd = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
+--#####################################################
+--  ส่วนที่ 2: เก็บตัวแปรในหน่วยความจำ (ไม่มีการเขียนไฟล์)
+--#####################################################
+local MaxGems = 0
+local DiscordID = ""
+local WhiteScreen = false
+local IsSended = false
 
--- โครงสร้าง JSON
-local SettingsFile = "UserData.json"
-local DefaultData = {
-    MaxGems = 0,
-    DiscordID = "",
-    OldGems = 0,
-    IsSended = false,
-    WhiteScreen = false
-}
-
---############################################################
--- (2) ฟังก์ชันอ่าน/เขียนไฟล์ JSON
---############################################################
-local function loadSettings()
-    if isfile(SettingsFile) then
-        local s = readfile(SettingsFile)
-        local ok, data = pcall(function()
-            return HttpService:JSONDecode(s)
-        end)
-        if ok and type(data) == "table" then
-            return data
-        else
-            warn("JSON ไฟล์เสียหาย สร้างใหม่.")
-        end
-    end
-    writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
-    return DefaultData
-end
-
-local function saveSettings(tbl)
-    local s = HttpService:JSONEncode(tbl)
-    writefile(SettingsFile, s)
-end
-
--- อ่านค่า LocalData
-local LocalData = loadSettings()
-
--- เช็ก + บังคับค่า
-if typeof(LocalData.OldGems) ~= "number" then
-    LocalData.OldGems = 0
-    saveSettings(LocalData)
-end
-
--- ดึงมาเก็บในตัวแปร (ไว้ใช้สะดวก ๆ)
-local MaxGems = LocalData.MaxGems or 0
-local DiscordID = LocalData.DiscordID or ""
-local OldGems = LocalData.OldGems or 0
-local IsSended = LocalData.IsSended or false
-local WhiteScreen = LocalData.WhiteScreen or false
-
---############################################################
--- (3) พยายามรอ _stats, gem_amount จริง ๆ
---############################################################
-local stats = nil
-pcall(function()
-    stats = player:WaitForChild("_stats", 60)  -- รอ 60 วินาที
-end)
-
-local gemObj = nil
-if stats then
-    pcall(function()
-        gemObj = stats:WaitForChild("gem_amount", 60)
-    end)
-end
-
-if not gemObj or typeof(gemObj.Value) ~= "number" then
-    -- กันกรณีที่ยังหา gem_amount ไม่เจอจริง ๆ
-    -- หรือ gemObj.Value ไม่ใช่ number (ผิดปกติมาก)
-    warn("ไม่พบ gem_amount หรือ gemObj.Value ไม่ใช่ตัวเลข => จะตั้ง currentGems = 0 ตลอด")
-end
-
---############################################################
--- (4) สร้าง GUI
---############################################################
+--#####################################################
+--  ส่วนที่ 3: สร้าง GUI
+--#####################################################
 local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/SinnyDEV/Lib/main/UI.lua'))()
 local Window = Library:CreateWindow({
     Title = "PLaNS x SHOP",
-    Center = true,
+    Center = true, 
     AutoShow = true,
 })
 
@@ -103,11 +41,11 @@ local SettingsBox = MainTab:AddLeftGroupbox("Settings")
 -- Toggle White Screen
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
     Text = 'Toggle White Screen',
-    Default = WhiteScreen,
+    Default = false
 })
 WhiteScreenToggle:OnChanged(function(value)
-    LocalData.WhiteScreen = value
-    saveSettings(LocalData)
+    WhiteScreen = value
+    -- ปิด/เปิด 3D Rendering
     RunService:Set3dRenderingEnabled(not value)
 end)
 
@@ -116,49 +54,36 @@ local mg = SettingsBox:AddInput('Max Gems', {
     Numeric = true,
     Finished = false,
     Text = 'Max Gems',
-    Placeholder = 'เป้าหมาย Gems',
-    Default = MaxGems
+    Placeholder = 'ใส่จำนวน Gems ที่ต้องการ',
+    Default = 0
 })
 
 -- ช่องกรอก Discord ID
 local di = SettingsBox:AddInput('Discord ID', {
-    Numeric = false,
-    Finished = false,
+    Numeric = false, 
+    Finished = false, 
     Text = 'Discord ID',
     Placeholder = 'ใส่ Discord ID',
-    Default = DiscordID
+    Default = ""
 })
 
+-- ปุ่มบันทึก
 SettingsBox:AddButton('Save Settings', function()
-    LocalData.MaxGems = tonumber(mg.Value) or 0
-    LocalData.DiscordID = di.Value
-    LocalData.IsSended = false
-
-    if typeof(LocalData.OldGems) ~= "number" then
-        LocalData.OldGems = 0
-    end
-
-    if LocalData.OldGems == 0 and gemObj and typeof(gemObj.Value) == "number" then
-        LocalData.OldGems = gemObj.Value
-    end
-
-    saveSettings(LocalData)
-
-    MaxGems = LocalData.MaxGems
-    DiscordID = LocalData.DiscordID
-    OldGems = LocalData.OldGems
-    IsSended = false
-
-    print("Saved! MaxGems =", MaxGems, "DiscordID =", DiscordID, "OldGems =", OldGems)
+    MaxGems = tonumber(mg.Value) or 0
+    DiscordID = di.Value
+    IsSended = false  -- เคลียร์สถานะส่ง WebhookEnd
+    print("Saved Settings (in memory). MaxGems =", MaxGems, "DiscordID =", DiscordID)
 end)
 
---############################################################
--- (5) ฟังก์ชันส่ง Webhook
---############################################################
-local function sendWebhookNormal(title, desc)
-    local req = syn and syn.request or http_request or request
-    if not req then
-        warn("No request function found! (Normal Webhook)")
+--#####################################################
+--  ส่วนที่ 4: ฟังก์ชันส่ง Webhook
+--#####################################################
+
+-- ส่ง Webhook “ปกติ” (แจ้งเหตุทั่วไป เช่น จบเกม)
+local function sendWebhookNormal(title, description)
+    local requestFunc = syn and syn.request or http_request or request
+    if not requestFunc then
+        warn("No request function found for Normal Webhook!")
         return
     end
     local payload = {
@@ -166,12 +91,12 @@ local function sendWebhookNormal(title, desc)
         embeds = {
             {
                 title = title,
-                description = desc,
+                description = description,
                 color = 0x00FF99
             }
         }
     }
-    req({
+    requestFunc({
         Url = _G.Webhook,
         Method = "POST",
         Headers = { ["Content-Type"] = "application/json" },
@@ -179,23 +104,24 @@ local function sendWebhookNormal(title, desc)
     })
 end
 
-local function sendWebhookEnd(title, desc)
-    local req = syn and syn.request or http_request or request
-    if not req then
-        warn("No request function found! (End Webhook)")
+-- ส่ง Webhook “End” (เมื่อ Gems ถึง Max)
+local function sendWebhookEnd(title, description)
+    local requestFunc = syn and syn.request or http_request or request
+    if not requestFunc then
+        warn("No request function found for End Webhook!")
         return
     end
     local payload = {
-        content = "<@"..(LocalData.DiscordID or "")..">",
+        content = "<@"..DiscordID..">", -- mention ลูกค้า
         embeds = {
             {
                 title = title,
-                description = desc,
+                description = description,
                 color = 0xFF1493
             }
         }
     }
-    req({
+    requestFunc({
         Url = WebhookEnd,
         Method = "POST",
         Headers = { ["Content-Type"] = "application/json" },
@@ -203,63 +129,27 @@ local function sendWebhookEnd(title, desc)
     })
 end
 
---############################################################
--- (6) ฟังก์ชัน CheckGems
---############################################################
+--#####################################################
+--  ส่วนที่ 5: ตรวจสอบ Gems และแจ้งเตือน
+--#####################################################
+-- ฟังก์ชันเช็ค Gems >= MaxGems
 local function CheckGems()
-    -- บังคับ OldGems เป็นตัวเลข
-    if typeof(LocalData.OldGems) ~= "number" then
-        LocalData.OldGems = 0
-        saveSettings(LocalData)
-    end
-
-    -- เอาค่า Gems ปัจจุบัน
     local currentGems = 0
-    if gemObj and typeof(gemObj.Value) == "number" then
-        currentGems = gemObj.Value
-    else
-        -- ถ้า gemObj ไม่มีหรือไม่ใช่ตัวเลข => currentGems = 0
-        -- จะฟ้องใน console ด้วย
-        warn("gemObj is nil or gemObj.Value not number => currentGems=0")
-    end
+    pcall(function()
+        currentGems = player._stats.gem_amount.Value
+    end)
 
-    -- Debug
-    -- print("CheckGems => current:", currentGems, "OldGems:", LocalData.OldGems, "MaxGems:", LocalData.MaxGems)
-
-    if currentGems < LocalData.OldGems then
-        local diff = LocalData.OldGems - currentGems
-        LocalData.MaxGems = LocalData.MaxGems - diff
-        if LocalData.MaxGems < 0 then
-            LocalData.MaxGems = 0
-        end
-        LocalData.OldGems = currentGems
-        saveSettings(LocalData)
-
-        MaxGems = LocalData.MaxGems
-        print("[Use Gems] diff:", diff, " => new MaxGems:", MaxGems)
-
-    elseif currentGems > LocalData.OldGems then
-        LocalData.OldGems = currentGems
-        saveSettings(LocalData)
-    end
-
-    -- เช็คเป้า
-    if currentGems >= LocalData.MaxGems
-       and LocalData.MaxGems > 0
-       and (not LocalData.IsSended) then
-
+    if currentGems >= MaxGems and MaxGems > 0 and not IsSended then
+        -- ส่งแจ้งเตือนเฉพาะครั้งแรก
         sendWebhookEnd(
             "Gems Reached Max!",
-            string.format("**%s** สะสมได้ **%d / %d** แล้ว!", player.Name, currentGems, LocalData.MaxGems)
+            string.format("**%s** สะสมได้ **%d / %d** Gems แล้ว! \nขอบคุณที่ใช้บริการน้า ✨", player.Name, currentGems, MaxGems)
         )
-        LocalData.IsSended = true
-        saveSettings(LocalData)
+        IsSended = true
     end
 end
 
---############################################################
--- (7) วนเช็ค Gems ทุก 10 วินาที
---############################################################
+-- 5.1) เช็ค Gems ทุก ๆ 10 วินาที
 spawn(function()
     while true do
         wait(10)
@@ -267,30 +157,28 @@ spawn(function()
     end
 end)
 
---############################################################
--- (8) จบเกม => ส่ง WebhookNormal
---############################################################
+-- 5.2) แจ้งเมื่อ “จบเกม” ถ้ามี GameFinished
 spawn(function()
-    local GameFinished = nil
+    local gameFinished = nil
     pcall(function()
-        GameFinished = workspace._DATA:WaitForChild("GameFinished", 30)
+        gameFinished = workspace._DATA:WaitForChild("GameFinished")
     end)
-    if GameFinished then
-        GameFinished.Changed:Connect(function()
-            if GameFinished.Value == true then
-                local cg = 0
-                if gemObj and typeof(gemObj.Value) == "number" then
-                    cg = gemObj.Value
-                end
+    if gameFinished then
+        gameFinished.Changed:Connect(function()
+            if gameFinished.Value == true then
+                local currentGems = 0
+                pcall(function()
+                    currentGems = player._stats.gem_amount.Value
+                end)
                 sendWebhookNormal(
                     "End Game Info",
-                    string.format("Player: %s จบเกมด้วย %d Gems (Goal: %d)", player.Name, cg, LocalData.MaxGems)
+                    string.format("Player: **%s** จบเกมด้วย %d Gems (เป้า: %d)", player.Name, currentGems, MaxGems)
                 )
             end
         end)
     else
-        warn("ไม่พบ GameFinished => อยู่ใน lobby หรือเกมอื่น")
+        warn("GameFinished not found - อาจจะอยู่ในล็อบบี้ หรือเกมอื่น.")
     end
 end)
 
-print("Ultimate Fix script loaded. If still error => gem_amount not found or executor can't write file.")
+print("PLaNS x SHOP (no-file-simple) script loaded. All settings are in-memory only!")
