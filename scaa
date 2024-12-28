@@ -233,7 +233,7 @@ SettingsBox:AddButton('Test Webhook', function()
     )
 
     -- เรียกฟังก์ชัน sendWebhook() เพื่อส่งทันที
-    sendWebhook("Manual Test Webhook", testDesc)
+    sendWebhook("ทดสอบแจ้งเตือนๆ", testDesc)
 end)
 
 -- Toggle White Screen (ถ้าต้องการ)
