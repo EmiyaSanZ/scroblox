@@ -271,7 +271,11 @@ do
     ScreenGui.Name = "UI_ToggleButton"
     ScreenGui.ResetOnSpawn = false
 
-    ScreenGui.Parent = game.CoreGui or player:WaitForChild("PlayerGui")
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    ScreenGui.DisplayOrder = 9999
+
+    --ScreenGui.Parent = game.CoreGui or player:WaitForChild("PlayerGui")
+    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
     local ToggleButton = Instance.new("ImageButton")
     ToggleButton.Name = "ToggleButton"
