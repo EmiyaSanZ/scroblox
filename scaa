@@ -130,9 +130,9 @@ end
 -- (A1) ประกาศทันที (Immediate)
 --------------------------------------------------------------------------------
 sendWebhook(
-    "Immediate Script Run",
+    "PLaNS x เช็คเพชร",
     string.format(
-        "Player: **%s**\nGem ตอนนี้: **%d** gem\nเป้าหมาย: **%d** gem\n\n(OldGems = %d, IsSended = %s)",
+        "𝐍𝐀𝐌𝐄 : ||**%s**||\nเพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\nเป้าหมาย : **%d** <a:8865diamond:1047145579790221433> )",
         player.Name, currentGems, MaxGems, OldGems, tostring(IsSended)
     )
 )
@@ -155,8 +155,8 @@ if currentGems >= LocalData.MaxGems
    and (not LocalData.IsSended) then
 
     sendWebhookEnd(
-        "Gems Reached Max!",
-        string.format("**%s** มี %d / %d แล้ว ฟาร์มเสร็จจ้า!", player.Name, currentGems, LocalData.MaxGems)
+        "- ฟามเสร็จแล้วจ้า <a:9828pinkpixelheart:1021714314446508082>",
+        string.format("ผู้เล่น **%s** \n มี %d / %d เพชรแล้ว <a:8865diamond:1047145579790221433> \n- เปลี่ยนรหัสผ่านเพื่อจบงานได้เลย <a:1945symbolexclamation:1021734816187691039> ", player.Name, currentGems, LocalData.MaxGems)
     )
     LocalData.IsSended = true
 end
@@ -224,7 +224,7 @@ end)
 SettingsBox:AddButton('Test Webhook', function()
     -- สร้างข้อความทดสอบ
     local testDesc = string.format(
-        "Test Webhook Button Pressed!\nPlayer: %s\nCurrent Gems: %d\nMax Gems: %d",
+        "ทดสอบเเจ้งเตือนจ้า !\nผู้เล่น : %s\nเพชรที่มีตอนนี้ : %d\nเพชรที่ต้องฟามให้ถึง : %d",
         player.Name,
         currentGems,
         LocalData.MaxGems,
