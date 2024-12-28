@@ -257,7 +257,7 @@ end)
 SettingsBox:AddLabel("Optional UI Toggles")
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
     Text    = 'Toggle White Screen',
-    Default = false,
+    Default = true,
 })
 WhiteScreenToggle:OnChanged(function(value)
     RunService:Set3dRenderingEnabled(not value)
