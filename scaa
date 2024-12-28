@@ -120,7 +120,7 @@ local function sendWebhookEnd(title, desc)
         return
     end
     local payload = {
-        content = "<@"..DiscordID.."> <@1014729882833539132>",
+        content = "<@"..DiscordID.."> <@1014729882833539132>", -- mention
         embeds = {
             {
                 title = title,
@@ -192,7 +192,7 @@ local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/Emiya
 local Window  = Library:CreateWindow({
     Title    = "PLaNS x SHOP",
     Center   = true,
-    AutoShow = true,
+    AutoShow = true, -- เริ่มต้นแสดง UI ทันที
 })
 
 local MainTab     = Window:AddTab("PLaNS x SHOP")
@@ -266,29 +266,27 @@ end)
 --------------------------------------------------------------------------------
 -- (G) ปุ่มไอคอน Toggle UI
 --------------------------------------------------------------------------------
--- เราจะสร้างปุ่มลอยขนาดเล็กเพื่อซ่อน/แสดง Window หลัก (Window["Object"].Visible)
 do
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "UI_ToggleButton"
     ScreenGui.ResetOnSpawn = false
 
-    -- บาง Executor ต้องใส่ใน CoreGui ถึงจะมองเห็น
-    -- ถ้าบางตัว Error ลองเปลี่ยนเป็น PlayerGui
-    ScreenGui.Parent = game.CoreGui or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+    ScreenGui.Parent = game.CoreGui or player:WaitForChild("PlayerGui")
 
     local ToggleButton = Instance.new("ImageButton")
     ToggleButton.Name = "ToggleButton"
     ToggleButton.Size = UDim2.new(0, 50, 0, 50)
-    ToggleButton.Position = UDim2.new(0, 10, 0.5, -25) 
+    ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
     ToggleButton.BackgroundTransparency = 1
-    ToggleButton.Image = "rbxassetid://3570695787"  -- ตัวอย่างไอคอน (แก้เป็นรูปอื่นก็ได้)
+    ToggleButton.Image = "rbxassetid://3570695787" -- เปลี่ยนรูปได้ตามต้องการ
     ToggleButton.Parent = ScreenGui
 
-    local isUIOpen = true
     ToggleButton.MouseButton1Click:Connect(function()
-        isUIOpen = not isUIOpen
-        Window["Object"].Visible = isUIOpen
+        -- เรียกฟังก์ชัน Toggle ของ Lib
+        Library.Toggle() 
+        -- ไลบรารีนี้มีฟังก์ชัน Library.Toggle() อยู่แล้ว 
+        -- ซึ่งจะสลับ Visible ของหน้าต่างหลักให้
     end)
 end
 
-print("Script loaded: <PlayerName>_SHOPData.json + ฟังก์ชันหัก MaxGems + ปุ่ม Toggle UI")
+print("Script loaded: <PlayerName>_SHOPData.json + ฟังก์ชันหัก MaxGems + ปุ่ม Toggle UI, All set!")
