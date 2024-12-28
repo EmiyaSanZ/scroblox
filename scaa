@@ -18,8 +18,8 @@ _G.Webhook   = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
 -- ชื่อไฟล์ JSON
-local player1 = game:GetService("Players").LocalPlayer
-local SettingsFile = "UserData.json"
+local SettingsFile = player.Name.."_SHOPData.json"
+--local SettingsFile = "UserData.json"
 
 -- ค่าเริ่มต้น (ถ้าไม่เคยมีไฟล์)
 local DefaultData = {
@@ -146,7 +146,7 @@ sendWebhook(
         "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
         "เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
         "เป้าหมาย : **%d** <a:8865diamond:1047145579790221433>\n" ..
-        "ยอดฟาร์มเพชรที่ต้องการ **%d**" ,
+        "ยอดฟาร์มเพชรที่ต้องการ **%d** เพชร" ,
 
         player.Name,
         currentGems,
