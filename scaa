@@ -20,6 +20,13 @@ local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkN
 -- ชื่อไฟล์ JSON
 local player1 = game:GetService("Players").LocalPlayer
 local SettingsFile = player1.Name.."_SHOPData.json"
+
+if not (isfile(SettingsPath..[[\]]..player1.Name.."_SHOPData.json")) then
+    writefile(SettingsPath..[[\]]..player1.Name.."_SHOPData.json", game.HttpService:JSONEncode({
+        ["White Screen"] = false
+    }))
+end
+
 --local SettingsFile = "UserData.json"
 
 -- ค่าเริ่มต้น (ถ้าไม่เคยมีไฟล์)
