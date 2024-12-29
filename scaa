@@ -12,6 +12,20 @@ local Players    = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local HttpService= game:GetService("HttpService")
 local player     = Players.LocalPlayer
+local ThumbnailURL = nil
+
+
+local ThumbnailRequest = http.request(
+    {
+        Url = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..tostring(game.Players.LocalPlayer.UserId).."&size=420x420&format=Png&isCircular=false",
+        Method = "GET",
+        Headers = {
+            ["Content-Type"] = "application/json"
+        },
+    }
+)
+ThumbnailURL = (game:GetService("HttpService"):JSONDecode(ThumbnailRequest.Body))["data"][1]["imageUrl"]
+print(ThumbnailURL)
 
 --------------------------------------------------------------------------------
 -- (B) ประกาศ Webhook หลัก + WebhookEnd
@@ -140,7 +154,8 @@ local function sendWebhook(title, desc)
         embeds = {{
             title = title,
             description = desc,
-            color = 0x00FF99
+            color = 0x00FF99,
+            image = ThumbnailURL
         }}
     }
     req({
@@ -162,7 +177,8 @@ local function sendWebhookEnd(title, desc)
         embeds = {{
             title = title,
             description = desc,
-            color = 0xFF1493
+            color = 0xFF1493,
+            image = ThumbnailURL
         }}
     }
     req({
