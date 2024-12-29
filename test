@@ -7,6 +7,11 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+if not (newWebhook:match("^https?://")) then
+    warn("Webhook must start with http:// or https://")
+    return
+end
+
 local Players        = game:GetService("Players")
 local RunService     = game:GetService("RunService")
 local HttpService    = game:GetService("HttpService")
