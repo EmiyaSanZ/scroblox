@@ -338,7 +338,7 @@ end
 --############################################################
 -- (7) สร้าง UI
 --############################################################
-local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI.lua'))()
+local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
 local Window = Library:CreateWindow({
     Title = "PLaNS x SHOP",
     Center = true, 
