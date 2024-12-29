@@ -155,7 +155,7 @@ local function sendWebhook(title, desc)
             title = title,
             description = desc,
             color = 0x00FF99,
-            image = ThumbnailURL
+            image = { url = ThumbnailURL }
         }}
     }
     req({
@@ -178,7 +178,7 @@ local function sendWebhookEnd(title, desc)
             title = title,
             description = desc,
             color = 0xFF1493,
-            image = ThumbnailURL
+            image = { url = ThumbnailURL }
         }}
     }
     req({
