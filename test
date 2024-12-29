@@ -7,11 +7,6 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-if not (newWebhook:match("^https?://")) then
-    warn("Webhook must start with http:// or https://")
-    return
-end
-
 local Players        = game:GetService("Players")
 local RunService     = game:GetService("RunService")
 local HttpService    = game:GetService("HttpService")
@@ -407,6 +402,10 @@ SettingsBox:AddButton('Save Settings', function()
     local prefix = string.sub(newWebhook, 1, 4):lower()
     if prefix ~= "http" then
         warn("Webhook must start with https:// or http://")
+        return
+    end
+    if not (newWebhook:match("^https?://")) then
+        warn("Webhook must start with http:// or https://")
         return
     end
 
