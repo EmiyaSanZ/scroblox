@@ -21,27 +21,7 @@ _G.Webhook    = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHl
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
 --------------------------------------------------------------------------------
--- (C) ฟังก์ชัน GetCurrentLevel() (กันกรณีไม่มี spawn_units)
---------------------------------------------------------------------------------
-
-local function GetCurrentLevel()
-    -- ถ้าหาได้ => คืน string เช่น "410"
-    -- ถ้าหาไม่ได้ => คืน "???"
-    local foundLevel = "รออัพเดต"
-    pcall(function()
-        local spawnUnits = player:WaitForChild("PlayerGui", 5):WaitForChild("spawn_units", 2)
-        local lvlObj = spawnUnits.Lives.Main.Desc:WaitForChild("Level", 2)
-        foundLevel = lvlObj.Text
-    end)
-    -- ตัด "Level " ออก
-    if typeof(foundLevel)=="string" then
-        foundLevel = string.gsub(foundLevel, "Level ", "")
-    end
-    return foundLevel
-end
-
---------------------------------------------------------------------------------
--- (D) ตั้งชื่อไฟล์ JSON = "<PlayerName>_SHOPData.json"
+-- (C) ตัวแปรเก็บชื่อไฟล์ JSON = "<PlayerName>_SHOPData.json"
 --------------------------------------------------------------------------------
 
 local SettingsFile = player.Name .. "_SHOPData.json"
@@ -52,11 +32,13 @@ local DefaultData = {
     DiscordID     = "",
     OldGems       = 0,
     IsSended      = false,
-    AddGemsWanted = 0
+    AddGemsWanted = 0,
+
+    SavedLevel    = "???",  -- <--- เพิ่มฟิลด์เก็บเลเวลล่าสุด (default ???)
 }
 
 --------------------------------------------------------------------------------
--- (E) ฟังก์ชันโหลด/เซฟไฟล์ JSON
+-- (D) ฟังก์ชัน load/save ไฟล์ JSON
 --------------------------------------------------------------------------------
 
 local function loadSettings()
@@ -80,9 +62,9 @@ local function loadSettings()
     return DefaultData
 end
 
-local function saveSettings(t)
+local function saveSettings(tbl)
     if writefile then
-        local s = HttpService:JSONEncode(t)
+        local s = HttpService:JSONEncode(tbl)
         writefile(SettingsFile, s)
     else
         warn("Executor ไม่รองรับ writefile => saveSettings ล้มเหลว")
@@ -90,7 +72,7 @@ local function saveSettings(t)
 end
 
 --------------------------------------------------------------------------------
--- (F) โหลดข้อมูลจาก JSON + ดึงค่า Gems จาก _stats
+-- (E) โหลดข้อมูลจากไฟล์ + เก็บค่า
 --------------------------------------------------------------------------------
 
 local LocalData = loadSettings()
@@ -100,9 +82,13 @@ local DiscordID     = LocalData.DiscordID or ""
 local OldGems       = LocalData.OldGems or 0
 local IsSended      = LocalData.IsSended or false
 local AddGemsWanted = LocalData.AddGemsWanted or 0
+local SavedLevel    = LocalData.SavedLevel or "???"
 
--- หา _stats.gem_amount แบบไม่ล็อกสคริปต์
-local gemObj = nil
+--------------------------------------------------------------------------------
+-- (F) ลองหา _stats.gem_amount (กันสคริปต์ไม่บล็อก)
+--------------------------------------------------------------------------------
+
+local gemObj
 local currentGems = 0
 pcall(function()
     local stats = player:WaitForChild("_stats", 5)
@@ -115,7 +101,32 @@ else
 end
 
 --------------------------------------------------------------------------------
--- (G) ฟังก์ชันส่ง Webhook / WebhookEnd
+-- (G) หาค่า Level (spawn_units) + อัปเดตลง JSON ถ้าหาเจอ
+--------------------------------------------------------------------------------
+
+local function TryGetLevelOrSaved()
+    local foundLevel = nil
+    pcall(function()
+        local spawnUnits = player:WaitForChild("PlayerGui", 5):WaitForChild("spawn_units", 2)
+        local lvlObj = spawnUnits.Lives.Main.Desc:WaitForChild("Level", 2)
+        foundLevel = lvlObj.Text
+    end)
+    -- ถ้า foundLevel == nil => แปลว่าหาไม่ได้ => ใช้ SavedLevel เดิม
+    if not foundLevel then
+        return SavedLevel  -- ใช้ค่าเก่าที่มี
+    end
+    -- ถ้ามี foundLevel => ตัด "Level " ออก
+    local newLV = string.gsub(foundLevel, "Level ", "")
+    -- อัปเดต LocalData + เซฟลงไฟล์
+    LocalData.SavedLevel = newLV
+    saveSettings(LocalData)
+    return newLV
+end
+
+local currentLevel = TryGetLevelOrSaved()
+
+--------------------------------------------------------------------------------
+-- (H) ฟังก์ชันส่ง Webhook และ WebhookEnd
 --------------------------------------------------------------------------------
 
 local function sendWebhook(title, desc)
@@ -135,7 +146,7 @@ local function sendWebhook(title, desc)
     req({
         Url = _G.Webhook,
         Method = "POST",
-        Headers = {["Content-Type"]="application/json"},
+        Headers = {["Content-Type"] = "application/json"},
         Body = HttpService:JSONEncode(payload)
     })
 end
@@ -147,7 +158,7 @@ local function sendWebhookEnd(title, desc)
         return
     end
     local payload = {
-        content = "<@"..DiscordID.."> <@1014729882833539132>", -- mention
+        content = "<@"..DiscordID.."> <@1014729882833539132>", 
         embeds = {{
             title = title,
             description = desc,
@@ -157,21 +168,20 @@ local function sendWebhookEnd(title, desc)
     req({
         Url = WebhookEnd,
         Method = "POST",
-        Headers = {["Content-Type"]="application/json"},
+        Headers = {["Content-Type"] = "application/json"},
         Body = HttpService:JSONEncode(payload)
     })
 end
 
 --------------------------------------------------------------------------------
--- (H) ส่ง Webhook ทันที + เช็คปรับ MaxGems เมื่อใช้เพชร
+-- (I) ส่ง Webhook ทันที + เช็คปรับ MaxGems
 --------------------------------------------------------------------------------
 
-local currentLevel = GetCurrentLevel()
 sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
-        "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
-        "・𝐋𝐞𝐯𝐞𝐥  : **%s**\n" ..
+        "NAME : **%s**\n" ..
+        "・Level : **%s**\n" ..
         "・เพชรตอนนี้ : **%d**\n" ..
         "・เป้าหมาย (รวม) : **%d**\n\n" ..
         "・ฟามเพชรจำนวน : **%d**",
@@ -183,7 +193,7 @@ sendWebhook(
     )
 )
 
--- ถ้าผู้เล่นใช้เพชร => หักออกจาก MaxGems
+-- ถ้าผู้เล่นใช้เพชร => หักจาก MaxGems
 if currentGems < OldGems then
     local diff = OldGems - currentGems
     LocalData.MaxGems = math.max(LocalData.MaxGems - diff, 0)
@@ -201,7 +211,7 @@ then
     sendWebhookEnd(
         "- ฟามเสร็จแล้วจ้า <a:9828pinkpixelheart:1021714314446508082>",
         string.format(
-            "- ผู้เล่น ||%s|| \n- Level: **%s**\n- มี %d / %d เพชรแล้ว\n- ฟามเพชรจำนวน %d เพชร\n- ฟามเสร็จแล้วเปลี่ยนรหัสผ่าน!",
+            "- ผู้เล่น %s\n- Level: %s\n- มี %d / %d เพชร\n- ฟามเพชรทั้งหมด %d เพชร\n- ฟามเสร็จแล้วเปลี่ยนรหัสผ่าน!",
             player.Name,
             currentLevel,
             currentGems,
@@ -215,14 +225,14 @@ end
 saveSettings(LocalData)
 
 --------------------------------------------------------------------------------
--- (I) สร้าง UI (Lib) : "Add Gems" => MaxGems = currentGems + AddGemsWanted
+-- (J) สร้าง UI (Lib): "Add Gems" => MaxGems = currentGems + AddGemsWanted
 --------------------------------------------------------------------------------
 
 local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
 local Window  = Library:CreateWindow({
     Title    = "PLaNS x SHOP",
     Center   = true,
-    AutoShow = false, -- ซ่อนตั้งแต่แรก
+    AutoShow = false,
 })
 
 local MainTab     = Window:AddTab("PLaNS x SHOP")
@@ -268,9 +278,9 @@ end)
 -- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
-        "ทดสอบจ้า!\nPlayer: %s\nLevel: %s\nGemsNow: %d\nGoal: %d\nAddWanted: %d",
+        "ทดสอบ!\nPlayer: %s\nLevel: %s\nGemsNow: %d\nGoal: %d\nAddWanted: %d",
         player.Name,
-        GetCurrentLevel(),
+        currentLevel,  -- ใช้ Level ล่าสุด (อาจเป็นของใหม่ ถ้าหาเจอ)
         currentGems,
         LocalData.MaxGems,
         LocalData.AddGemsWanted
@@ -282,15 +292,16 @@ end)
 SettingsBox:AddLabel("Optional UI Toggles")
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
     Text    = 'Toggle White Screen',
-    Default = false,
+    Default = true,
 })
 WhiteScreenToggle:OnChanged(function(v)
     RunService:Set3dRenderingEnabled(not v)
 end)
 
 --------------------------------------------------------------------------------
--- (J) ปุ่มไอคอน Toggle UI
+-- (K) ปุ่มไอคอน Toggle UI
 --------------------------------------------------------------------------------
+
 do
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "UI_ToggleButton"
@@ -298,7 +309,7 @@ do
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     ScreenGui.DisplayOrder = 9999
 
-    -- ลองใส่ Parent = player:WaitForChild("PlayerGui")
+    -- ใส่ Parent = PlayerGui
     ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
     local ToggleButton = Instance.new("ImageButton")
@@ -310,9 +321,8 @@ do
     ToggleButton.Parent = ScreenGui
 
     ToggleButton.MouseButton1Click:Connect(function()
-        -- Toggle UI
         Library.Toggle()
     end)
 end
 
-print("Script loaded successfully! No infinite waits for spawn_units, plus UI with toggle icon, done!")
+print("Script loaded! ถ้าไม่มี spawn_units => ใช้ Level เดิมจากไฟล์ SavedLevel แทน จนกว่าจะหาเจอใหม่.") 
