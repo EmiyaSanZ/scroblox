@@ -17,6 +17,16 @@ local player      = Players.LocalPlayer
 _G.Webhook    = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb"
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
+
+
+function GetCurrentLevel()
+    local LevelText = Level
+    return string.gsub(LevelText, "Level ", "")
+end
+function GetNumberFromString(S)
+    return string.match(S,"%d+")
+end
+
 --------------------------------------------------------------------------------
 -- (A0) ชื่อไฟล์ JSON = "<PlayerName>_SHOPData.json" (ในโฟลเดอร์หลัก)
 --------------------------------------------------------------------------------
@@ -75,6 +85,7 @@ local DiscordID     = LocalData.DiscordID     or ""
 local OldGems       = LocalData.OldGems       or 0
 local IsSended      = LocalData.IsSended      or false
 local AddGemsWanted = LocalData.AddGemsWanted or 0
+local Level         = LocalData.Level         or 0
 
 local stats  = player:WaitForChild("_stats", 30)
 local gemObj = stats and stats:WaitForChild("gem_amount", 30)
@@ -86,6 +97,13 @@ else
     warn("ไม่พบ gem_amount => currentGems=0")
 end
 
+
+
+local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+function GetCurrentLevel()
+    local LevelText = Level
+    return string.gsub(LevelText, "Level ", "")
+end
 --------------------------------------------------------------------------------
 -- (D) ฟังก์ชันส่ง Webhook
 --------------------------------------------------------------------------------
@@ -144,10 +162,12 @@ sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
         "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
-        "เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
-        "เป้าหมาย (รวม) : **%d** <a:8865diamond:1047145579790221433>\n\n" ..
-        "ฟามเพชรจำนวน : **%d** เพชร",
+        "・𝐋𝐞𝐯𝐞𝐥 : **%s**\n" ..
+        "・เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
+        "・เป้าหมาย (รวม) : **%d** <a:8865diamond:1047145579790221433>\n\n" ..
+        "・ฟามเพชรจำนวน : **%d** เพชร",
         player.Name,
+        GetCurrentLevel(),
         currentGems,
         MaxGems,
         AddGemsWanted
