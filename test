@@ -20,7 +20,7 @@ local SettingsPath   = "CustomerSettings"
 local WebhookEnd     = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
 -- ประกาศตัวแปรที่จะใช้
-local Webhook    = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
+local Webhook    = nil
 local DiscordID  = nil
 local MaxGems    = nil
 local OldGems    = nil
@@ -58,7 +58,7 @@ local DataFile      = FolderPath.."\\"..player.Name..".json"
 local SettingsFile  = SettingsPath.."\\"..player.Name..".json"
 
 local DefaultData   = {
-    ["Webhook"]  = "",       -- หลัก
+    ["Webhook"]  = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB",       -- หลัก
     ["Max Gems"] = 0,
     ["Discord ID"]= "",
     ["Old Gems"] = false,     -- ใช้ false เป็นสัญลักษณ์ว่ายังไม่เคยกำหนด
