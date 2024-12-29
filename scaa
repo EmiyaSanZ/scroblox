@@ -86,6 +86,8 @@ local OldGems       = LocalData.OldGems       or 0
 local IsSended      = LocalData.IsSended      or false
 local AddGemsWanted = LocalData.AddGemsWanted or 0
 local Level         = LocalData.Level         or 0
+local LVBP =        = LocalData.LVBP          or 0
+local LVBP2 =       = LocalData.LVBP2         or 0
 
 local stats  = player:WaitForChild("_stats", 30)
 local gemObj = stats and stats:WaitForChild("gem_amount", 30)
@@ -97,7 +99,8 @@ else
     warn("ไม่พบ gem_amount => currentGems=0")
 end
 
-
+local LVBP = Player.PlayerGui.BattlePass.Main.Level.V.Text,
+local LVBP2 = Player.PlayerGui.BattlePass.Main.FurthestRoom.V.Text,
 
 local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
 function GetCurrentLevel()
@@ -163,11 +166,14 @@ sendWebhook(
     string.format(
         "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
         "・𝐋𝐞𝐯𝐞𝐥 : **%s**\n" ..
+        "・BattlePass Level : %s [%s]" ..
         "・เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
         "・เป้าหมาย (รวม) : **%d** <a:8865diamond:1047145579790221433>\n\n" ..
         "・ฟามเพชรจำนวน : **%d** เพชร",
         player.Name,
         GetCurrentLevel(),
+        LVBP,
+        LVBP2,
         currentGems,
         MaxGems,
         AddGemsWanted
