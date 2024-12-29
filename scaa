@@ -85,6 +85,7 @@ local DiscordID     = LocalData.DiscordID     or ""
 local OldGems       = LocalData.OldGems       or 0
 local IsSended      = LocalData.IsSended      or false
 local AddGemsWanted = LocalData.AddGemsWanted or 0
+local Level         = LocalData.Level         or 0
 
 local stats  = player:WaitForChild("_stats", 30)
 local gemObj = stats and stats:WaitForChild("gem_amount", 30)
@@ -96,6 +97,11 @@ else
     warn("ไม่พบ gem_amount => currentGems=0")
 end
 
+local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+function GetCurrentLevel()
+    local LevelText = Level
+    return string.gsub(LevelText, "Level ", "")
+end
 --------------------------------------------------------------------------------
 -- (D) ฟังก์ชันส่ง Webhook
 --------------------------------------------------------------------------------
@@ -154,10 +160,12 @@ sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
         "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
-        "เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
-        "เป้าหมาย (รวม) : **%d** <a:8865diamond:1047145579790221433>\n\n" ..
-        "ฟามเพชรจำนวน : **%d** เพชร",
+        "・𝐋𝐞𝐯𝐞𝐥 : **%s**\n" ..
+        "・เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
+        "・เป้าหมาย (รวม) : **%d** <a:8865diamond:1047145579790221433>\n\n" ..
+        "・ฟามเพชรจำนวน : **%d** เพชร",
         player.Name,
+        GetCurrentLevel(),
         currentGems,
         MaxGems,
         AddGemsWanted
