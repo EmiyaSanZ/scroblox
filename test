@@ -1,318 +1,595 @@
---// final_merged_script_fix.lua
+-- =========================================================
+-- (A) รอเกมโหลดให้เสร็จก่อน
+-- =========================================================
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-local Players    = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local HttpService= game:GetService("HttpService")
-local player     = Players.LocalPlayer
+repeat task.wait() until game.Players.LocalPlayer
+repeat task.wait() until game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+repeat task.wait() until game.Players.LocalPlayer.PlayerGui:FindFirstChild("spawn_units")
+repeat task.wait() until game.Players.LocalPlayer:FindFirstChild("_stats")
 
--- สองโฟลเดอร์หลัก
-local FolderPath   = "CustomerData"
-local SettingsPath = "CustomerSettings"
+-- =========================================================
+-- (B) ประกาศ Service/ตัวแปรพื้นฐาน
+-- =========================================================
+local Players     = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local RunService  = game:GetService("RunService")
 
--- เผื่อ Executor ใช้ไม่ได้:
-local RequestFunc = http_request or request or HttpPost or syn and syn.request
-if not RequestFunc then
-    warn("ไม่พบฟังก์ชัน request/syn.request => จะส่ง Webhook ไม่ได้!")
-end
+local player      = Players.LocalPlayer
+local char        = player.Character or player.CharacterAdded:Wait()
 
--- เช็ค/สร้างโฟลเดอร์
-local function SafeIsFolder(path)
-    local s, r = pcall(function() return isfolder(path) end)
-    return (s and r)
-end
-local function SafeMakeFolder(path)
-    pcall(function() makefolder(path) end)
-end
-if not SafeIsFolder(FolderPath) then
-    SafeMakeFolder(FolderPath)
-end
-if not SafeIsFolder(SettingsPath) then
-    SafeMakeFolder(SettingsPath)
-end
+-- ชื่อไฟล์ JSON ไฟล์เดียว
+local SettingsFile = player.Name .. "_SHOPData.json"
 
--- ไฟล์
-local DataFile     = FolderPath.."/"..player.Name..".json"
-local SettingsFile = SettingsPath.."/"..player.Name..".json"
-
--- Default
+-- =========================================================
+-- (C) ตารางค่าเริ่มต้น หากไฟล์ยังไม่มี หรือเสีย
+-- =========================================================
 local DefaultData = {
-    ["Webhook"]    = "", -- อย่าใส่ URL ไว้เลย เดี๋ยวให้ User กรอกเอง
-    ["Max Gems"]   = 0,
-    ["Discord ID"] = "",
-    ["Old Gems"]   = false,
-    ["Is Sended"]  = false
-}
-local DefaultSettings = {
-    ["White Screen"] = false
+    -- ส่วน Settings หลัก
+    ["WhiteScreen"] = false,
+
+    -- ส่วนข้อมูลการแจ้ง Webhook
+    ["Webhook"]     = nil,
+    ["DiscordID"]   = nil,
+
+    ["MaxGems"]     = 0,
+    ["OldGems"]     = 0,
+    ["IsSended"]    = false,
+
+    -- สามารถใส่ค่าอื่น ๆ เพิ่มเติมได้ เช่น ...
+    -- ["SomeValue"] = ...
 }
 
--- โหลด-เซฟ Data
-local function LoadData()
-    if isfile(DataFile) then
-        local ok, decoded = pcall(function()
-            return HttpService:JSONDecode(readfile(DataFile))
+-- =========================================================
+-- (D) ฟังก์ชันโหลด/เซฟค่า JSON
+-- =========================================================
+local function loadSettings()
+    if isfile and isfile(SettingsFile) then
+        local content = readfile(SettingsFile)
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(content)
         end)
-        if ok and type(decoded)=="table" then
-            return decoded
+        if success and type(data) == "table" then
+            return data
+        else
+            warn("[SHOPData] JSON ไฟล์เสียหาย => สร้างใหม่")
         end
-        warn("JSON Error => Create new:", DataFile)
     end
-    writefile(DataFile, HttpService:JSONEncode(DefaultData))
+
+    -- ถ้ายังไม่มีไฟล์ ให้สร้างใหม่
+    if writefile then
+        writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
+    end
     return DefaultData
 end
-local function SaveData(tbl)
-    writefile(DataFile, HttpService:JSONEncode(tbl))
+
+local function saveSettings(tbl)
+    if writefile then
+        local json = HttpService:JSONEncode(tbl)
+        writefile(SettingsFile, json)
+    else
+        warn("[SHOPData] Executor ไม่รองรับ writefile => saveSettings() ล้มเหลว")
+    end
 end
 
--- โหลด-เซฟ Settings (White Screen)
-local function LoadSettings()
-    if isfile(SettingsFile) then
-        local ok, decoded = pcall(function()
-            return HttpService:JSONDecode(readfile(SettingsFile))
+-- =========================================================
+-- (E) โหลดข้อมูลจากไฟล์ JSON
+-- =========================================================
+local LocalData   = loadSettings()
+
+-- ดึงตัวแปรจาก LocalData (ถ้าไม่เจอจะใช้ค่าจาก DefaultData)
+local WhiteScreen = LocalData.WhiteScreen or false
+local Webhook     = LocalData.Webhook
+local DiscordID   = LocalData.DiscordID
+local MaxGems     = LocalData.MaxGems
+local OldGems     = LocalData.OldGems
+local IsSended    = LocalData.IsSended
+
+-- ป้องกันถ้าเป็น nil
+if OldGems == nil then OldGems = 0 end
+if MaxGems == nil then MaxGems = 0 end
+if IsSended == nil then IsSended = false end
+
+-- =========================================================
+-- (F) ประกาศตัวแปร / ฟังก์ชันอื่น ๆ เดิม
+-- =========================================================
+local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
+local ThumbnailURL = nil
+
+-- ฟังก์ชันช่วยดึงตัวเลขจาก string
+local function GetNumberFromString(S)
+    return string.match(S, "%d+")
+end
+
+-- ฟังก์ชันดึงค่าจาก Level Text
+local function GetCurrentLevel(LevelText)
+    if not LevelText then return "???" end
+    return string.gsub(LevelText, "Level ", "")
+end
+
+-- =========================================================
+-- (G) Get Thumbnail
+-- =========================================================
+local thumbRequest = nil
+pcall(function()
+    thumbRequest = syn and syn.request or request or http_request
+end)
+
+if thumbRequest then
+    local ThumbnailRequest = thumbRequest({
+        Url = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="
+                .. tostring(player.UserId)
+                .. "&size=420x420&format=Png&isCircular=false",
+        Method = "GET",
+        Headers = { ["Content-Type"] = "application/json" },
+    })
+    if ThumbnailRequest and ThumbnailRequest.Body then
+        local decode = HttpService:JSONDecode(ThumbnailRequest.Body)
+        if decode and decode.data and decode.data[1] then
+            ThumbnailURL = decode.data[1].imageUrl
+        end
+    end
+end
+
+-- ถ้าหาไม่ได้ ให้ใส่เป็นค่าว่าง
+if ThumbnailURL == nil then
+    ThumbnailURL = ""
+end
+
+print("[ThumbnailURL] =>", ThumbnailURL)
+
+-- =========================================================
+-- (H) ฟังก์ชัน/โค้ดหลักเหมือนสคริปต์เดิม
+-- =========================================================
+
+-- ตรวจว่ามี Webhook ไหม
+if Webhook and WebhookEnd then
+    if game.PlaceId == 8304191830 then
+        -- ===================== LOBBY (8304191830) =====================
+        
+        -- 1) Claim Gift
+        pcall(function()
+            game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_daily_reward:InvokeServer()
+            game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_christmas_calendar_reward:InvokeServer()
+            game:GetService("ReplicatedStorage").endpoints.client_to_server.claim_battlepass_rewards:InvokeServer()
         end)
-        if ok and type(decoded)=="table" then
-            return decoded
+
+        -- 2) อัปเดตค่า Gems
+        local currentgem = player["_stats"]["gem_amount"].Value
+        if OldGems > 0 then
+            if currentgem < OldGems then
+                -- ใช้เพชร => หักออกจาก MaxGems
+                MaxGems = MaxGems - (OldGems - currentgem)
+                if MaxGems < 0 then MaxGems = 0 end
+            end
         end
-        warn("JSON Error => Create new:", SettingsFile)
-    end
-    writefile(SettingsFile, HttpService:JSONEncode(DefaultSettings))
-    return DefaultSettings
-end
-local function SaveSettings(tbl)
-    writefile(SettingsFile, HttpService:JSONEncode(tbl))
-end
+        OldGems = currentgem
 
--- เรียก
-local LocalData     = LoadData()
-local LocalSettings = LoadSettings()
+        -- บันทึกกลับไฟล์
+        LocalData.MaxGems  = MaxGems
+        LocalData.OldGems  = OldGems
+        LocalData.IsSended = IsSended
+        saveSettings(LocalData)
 
--- เอาค่ามาใส่ตัวแปร
-local Webhook   = LocalData["Webhook"] or ""
-local MaxGems   = LocalData["Max Gems"] or 0
-local DiscordID = LocalData["Discord ID"] or ""
-local OldGems   = LocalData["Old Gems"]
-local IsSended  = LocalData["Is Sended"] or false
-local WhiteScreen= LocalSettings["White Screen"] or false
+        -- 3) เช็คว่าถึง Max หรือยัง
+        if currentgem >= MaxGems and not IsSended and MaxGems > 0 then
+            IsSended = true
+            LocalData.IsSended = true
+            saveSettings(LocalData)
 
--- ฟังก์ชันง่าย ๆ
-local function SafeMatchURL(str)
-    -- ป้องกัน str เป็น nil
-    if type(str)~="string" then return false end
-    return (str:match("^https?://")~=nil)
-end
+            local LevelText = player.PlayerGui.spawn_units.Lives.Main.Desc.Level.Text
+            local userLevel = GetCurrentLevel(LevelText)
 
-local function TryGetGems()
-    local v = 0
-    pcall(function()
-        v = player["_stats"].gem_amount.Value
-    end)
-    return v
-end
+            local descriptionend = "**𝐍𝐀𝐌𝐄 :** ||%s||\n" ..
+                                   "**💎・𝐆𝐄𝐌𝐒 : %s**\n" ..
+                                   "**<a:2891bitcoin:1021469261274824764>・𝐆𝐎𝐋𝐃 : %s**\n" ..
+                                   "**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・𝐋𝐞𝐯𝐞𝐥 : %s**\n\n" ..
+                                   "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n" ..
+                                   "<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"
 
-local function GetLevelLobby()
-    local lvl = "???"
-    pcall(function()
-        local gui = player.PlayerGui:WaitForChild("spawn_units", 1)
-        local s = gui.Lives.Main.Desc.Level.Text
-        lvl = s:gsub("Level ", "")
-    end)
-    return lvl
-end
-
-local currentGems = TryGetGems()
-local placeId = game.PlaceId
-
--- สร้างฟังก์ชันส่ง webhook
-local function SendNormalWebhook(title, desc)
-    if not RequestFunc then return end
-    if (not SafeMatchURL(Webhook)) then
-        warn("Webhook is invalid => skip sending..")
-        return
-    end
-    local bodyData = {
-        content = "",
-        embeds = {{
-            title = title,
-            description = desc,
-            color = 0xFF1493
-        }}
-    }
-    RequestFunc({
-        Url = Webhook,
-        Method = "POST",
-        Headers = {["Content-Type"]="application/json"},
-        Body = HttpService:JSONEncode(bodyData)
-    })
-end
-local function SendEndWebhook(title, desc)
-    if not RequestFunc then return end
-    if (not SafeMatchURL(WebhookEnd)) then
-        warn("WebhookEnd is invalid => skip sending..")
-        return
-    end
-    local bodyData = {
-        content = "<@"..DiscordID.."> <@&1006505817769521177>",
-        embeds = {{
-            title = title,
-            description = desc,
-            color = 0xFF1493
-        }}
-    }
-    RequestFunc({
-        Url = WebhookEnd,
-        Method = "POST",
-        Headers = {["Content-Type"]="application/json"},
-        Body = HttpService:JSONEncode(bodyData)
-    })
-end
-
--- เช็คสถานที่
-if placeId == 8304191830 then
-    -- Lobby
-    -- Logic หัก MaxGems เมื่อใช้เพชร
-    if OldGems and OldGems~=false then
-        if currentGems < OldGems then
-            local diff = (tonumber(OldGems) or 0) - currentGems
-            MaxGems = MaxGems - diff
-            LocalData["Max Gems"] = MaxGems
-            LocalData["Old Gems"] = currentGems
-            SaveData(LocalData)
-        else
-            LocalData["Old Gems"] = currentGems
-            SaveData(LocalData)
+            -- ส่ง WebhookEnd
+            if thumbRequest then
+                thumbRequest({
+                    Url = WebhookEnd,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = HttpService:JSONEncode({
+                        content = "<@"..tostring(DiscordID).."> <@&1006505817769521177>",
+                        embeds = {{
+                            title       = "**ฟามเสร็จแล้วเปลี่ยนรหัสได้เลย! <a:6157gawrgurapopcorn:1019689697590648973>**",
+                            description = string.format(
+                                descriptionend,
+                                player.Name,
+                                tostring(currentgem).." / "..tostring(MaxGems),
+                                tostring(player["_stats"]["gold_amount"].Value),
+                                userLevel
+                            ),
+                            type        = "rich",
+                            color       = tonumber(0xFF1493),
+                            footer      = {
+                                text     = "PLaNS SHOP ",
+                                icon_url = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                            },
+                            thumbnail   = { ["url"] = "" },
+                            image       = { ["url"] = ThumbnailURL },
+                            timestamp   = DateTime.now():ToIsoDate(),
+                        }}
+                    })
+                })
+            end
         end
+
+        -- 4) ส่ง Webhook รายงาน
+        do
+            local GemNow   = player["_stats"]["gem_amount"].Value
+            local GoldNow  = player["_stats"]["gold_amount"].Value
+            local LevelNow = player.PlayerGui.spawn_units.Lives.Main.Desc.Level.Text
+
+            -- เก็บค่าที่จะใส่ใน description
+            local description = " ———————————————\n**ข้อมูลผู้เล่น** ≧▽≦ <a:3018pinkheart:1019689700224684122>\n" ..
+                                "\n**Name: **||%s||\n**เพชร : ** **%s <a:8865diamond:1047145579790221433>**\n" ..
+                                "**ทอง : ** **%s <a:2891bitcoin:1021469261274824764>**\n%s <a:5622bloodpotion:1047140829703180298> \n" ..
+                                "———————————————\n**EXP จากด่าน** <:4026pridepotion:1047140826897203311>\n"
+
+            -- เก็บค่า inventory บางส่วน (ตัวอย่างใน original)
+            local ResultValue = {
+                ["Gem"]   = GemNow,
+                ["gold"]  = GoldNow,
+                ["Level"] = LevelNow,
+            }
+
+            -- ไล่เช็คของใน _FX_CACHE
+            local fxCache = game:GetService("ReplicatedStorage")["_FX_CACHE"]
+            for _, v in ipairs(fxCache:GetChildren()) do
+                if v:IsA("ImageButton") then
+                    -- ตัวอย่างการเช็ค
+                    -- (สามารถเพิ่ม logic เก็บเป็น string ได้ตามต้นฉบับ)
+                end
+            end
+
+            -- ส่ง Webhook
+            if thumbRequest then
+                thumbRequest({
+                    Url = Webhook,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = HttpService:JSONEncode({
+                        content = "",
+                        embeds = {{
+                            title       = "**✨ PLaNS SHOP ✨**",
+                            description = string.format(
+                                description,
+                                player.Name,
+                                ResultValue["Gem"].." / "..tostring(MaxGems),
+                                ResultValue["gold"],
+                                ResultValue["Level"]
+                            ),
+                            type        = "rich",
+                            color       = tonumber(0xFF1493),
+                            footer      = {
+                                text     = "PLaNS SHOP ",
+                                icon_url = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                            },
+                            thumbnail   = { url = ThumbnailURL },
+                            timestamp   = DateTime.now():ToIsoDate(),
+                        }}
+                    })
+                })
+            end
+
+            -- ส่ง Webhook อีกรอบ "ตอนนี้อยู่ในล็อบบี้"
+            if thumbRequest then
+                thumbRequest({
+                    Url = Webhook,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = HttpService:JSONEncode({
+                        content = "",
+                        embeds = {{
+                            title       = "**✨ PLaNS SHOP ✨**",
+                            description = "**ID: ||"..player.Name.."||**\n"..
+                                          "<a:6132lightblueheartspin:1021711798203846717> แจ้งเตือนสถานะ \n"..
+                                          "<a:alert:1021734820461674527> เล่นจบแล้วตอนนี้อยู่ในล็อบบี้ (ห้ามเข้ารหัสตอนนี้<a:4398qiqispin:1019693775515295824>)",
+                            type        = "rich",
+                            color       = tonumber(0xff0000),
+                            footer      = {
+                                text     = "PLaNS SHOP ",
+                                icon_url = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                            },
+                            thumbnail   = { url = ThumbnailURL },
+                            timestamp   = DateTime.now():ToIsoDate(),
+                        }}
+                    })
+                })
+            end
+
+    elseif game.PlaceId == 8349889591 then
+        -- ===================== Story Mode (8349889591) =====================
+
+        -- ถ้าเข้าด่าน => แจ้ง webhook ว่าเริ่มฟาร์ม
+        if thumbRequest then
+            thumbRequest({
+                Url = Webhook,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body = HttpService:JSONEncode({
+                    content = "",
+                    embeds = {{
+                        title       = "**✨ PLaNS SHOP ✨**",
+                        description = "**ID: ||"..player.Name.."||**\n"..
+                                      "<a:6132lightblueheartspin:1021711798203846717> แจ้งเตือนสถานะ \n"..
+                                      "<a:7131discordverifygreen:1019693746998218804> ตอนนี้กำลังฟามแล้วนะ ✦",
+                        type        = "rich",
+                        color       = tonumber(0x55FF66),
+                        footer      = {
+                            text     = "PLaNS SHOP ",
+                            icon_url = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                        },
+                        thumbnail   = { url = ThumbnailURL },
+                        timestamp   = DateTime.now():ToIsoDate(),
+                    }}
+                })
+            })
+        end
+
+        -- เช็ค Gems อีกครั้ง
+        local currentgem = player["_stats"]["gem_amount"].Value
+
+        if OldGems > 0 then
+            if currentgem < OldGems then
+                MaxGems = MaxGems - (OldGems - currentgem)
+                if MaxGems < 0 then MaxGems = 0 end
+            end
+        end
+        OldGems = currentgem
+
+        LocalData.MaxGems  = MaxGems
+        LocalData.OldGems  = OldGems
+        LocalData.IsSended = IsSended
+        saveSettings(LocalData)
+
+        -- ถ้าเกิน Max => ส่ง WebhookEnd
+        if currentgem >= MaxGems and not IsSended and MaxGems > 0 then
+            IsSended = true
+            LocalData.IsSended = true
+            saveSettings(LocalData)
+
+            local LevelText = player.PlayerGui.spawn_units.Lives.Main.Desc.Level.Text
+            local userLevel = GetCurrentLevel(LevelText)
+
+            local descriptionend = "**𝐍𝐀𝐌𝐄 :** ||%s||\n" ..
+                                   "**💎・𝐆𝐄𝐌𝐒 : %s**\n" ..
+                                   "**<a:2891bitcoin:1021469261274824764>・𝐆𝐎𝐋𝐃 : %s**\n" ..
+                                   "**<a:3729_Little_Pretty_Star_Pink:1054740345709146182>・𝐋𝐞𝐯𝐞𝐥 : %s**\n\n" ..
+                                   "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n" ..
+                                   "<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>"
+
+            if thumbRequest then
+                thumbRequest({
+                    Url = WebhookEnd,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = HttpService:JSONEncode({
+                        content = "<@"..tostring(DiscordID).."> <@&1006505817769521177>",
+                        embeds = {{
+                            title       = "**ฟามเสร็จแล้วเปลี่ยนรหัสได้เลย! <a:6157gawrgurapopcorn:1019689697590648973>**",
+                            description = string.format(
+                                descriptionend,
+                                player.Name,
+                                tostring(currentgem).." / "..tostring(MaxGems),
+                                tostring(player["_stats"]["gold_amount"].Value),
+                                userLevel
+                            ),
+                            type        = "rich",
+                            color       = tonumber(0xFF1493),
+                            footer      = {
+                                text     = "PLaNS SHOP ",
+                                icon_url = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                            },
+                            thumbnail   = { ["url"] = "" },
+                            image       = { ["url"] = ThumbnailURL },
+                            timestamp   = DateTime.now():ToIsoDate(),
+                        }}
+                    })
+                })
+            end
+        end
+
+        -- เมื่อจบด่าน => Workspace._DATA.GameFinished.Changed
+        local wsGameFinished = game:GetService("Workspace")["_DATA"].GameFinished
+        wsGameFinished.Changed:Connect(function()
+            if wsGameFinished.Value == true then
+                -- เมื่อเกมจบด่าน => ส่งรีพอร์ตสรุป
+                local newgem = player["_stats"]["gem_amount"].Value
+                if newgem < OldGems then
+                    MaxGems = MaxGems - (OldGems - newgem)
+                    if MaxGems < 0 then MaxGems = 0 end
+                end
+                OldGems = newgem
+
+                LocalData.MaxGems  = MaxGems
+                LocalData.OldGems  = OldGems
+                LocalData.IsSended = IsSended
+                saveSettings(LocalData)
+
+                -- ดึงข้อมูลผลลัพธ์
+                local PlayerGui    = player:WaitForChild("PlayerGui")
+                local spawnUnits   = PlayerGui:WaitForChild("spawn_units")
+                local resultsUI    = PlayerGui:WaitForChild("ResultsUI")
+                local hatchInfo    = PlayerGui:WaitForChild("HatchInfo")
+
+                local GemPath      = player["_stats"]["gem_amount"]
+                local GoldPath     = player["_stats"]["gold_amount"]
+                local KillsInGame  = player["_stats"].kills.Value
+
+                local LevelText    = spawnUnits.Lives.Main.Desc.Level.Text
+                local userLevel    = GetCurrentLevel(LevelText)
+
+                local GemReward    = resultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
+                local XPReward     = resultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text
+                local WaveCompleted= resultsUI.Holder.Middle.WavesCompleted.Text
+                local TimeCompleted= resultsUI.Holder.Middle.Timer.Text
+                local InfoGameEnd  = resultsUI.Holder.Title.Text
+
+                local newArea      = PlayerGui:WaitForChild("NewArea")
+                local MapTitle     = newArea.holder.areaTitle.Text
+                local MapDesc      = newArea.holder.areaDescription.Text
+                local Difficulty   = newArea.holder.Difficulty.Text
+
+                -- รอ HatchInfo
+                local AllItem = ""
+                local buttonNext = resultsUI.Holder.Buttons.Next
+
+                -- ฟังก์ชันกด next เรื่อย ๆ
+                spawn(function()
+                    while resultsUI.Holder.Visible do
+                        task.wait(0.5)
+                        pcall(function()
+                            for _,c in pairs(getconnections(buttonNext.Activated)) do
+                                c:Fire()
+                            end
+                        end)
+                    end
+                end)
+
+                -- ดักเวลามีตัวละคร/ไอเท็ม drop
+                hatchInfo.holder.info1.UnitName:GetPropertyChangedSignal("Text"):Connect(function()
+                    local itemName = hatchInfo.holder.info1.UnitName.Text
+                    AllItem = AllItem .. ("◈ " .. itemName .. "\n")
+                end)
+
+                local description = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level: %s```\n"..
+                                    "```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficuty : %s\n- Wave : %s | %s```\n"..
+                                    "```md\n#Enemies Killed\n- %d```\n"..
+                                    "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"..
+                                    "```เพชรรวม・%s💎```"
+
+                if thumbRequest then
+                    thumbRequest({
+                        Url = Webhook,
+                        Method = "POST",
+                        Headers = { ["Content-Type"] = "application/json" },
+                        Body = HttpService:JSONEncode({
+                            content = "",
+                            embeds = {{
+                                title       = "**<:9796zerogasm:1036348241656164394> PLaNS SHOP**",
+                                description = string.format(
+                                    description,
+                                    player.Name,
+                                    GemPath.Value,
+                                    GoldPath.Value,
+                                    userLevel,
+                                    InfoGameEnd,
+                                    MapTitle .. " : " .. MapDesc,
+                                    Difficulty,
+                                    string.match(WaveCompleted, "%d+"), -- ตัดเอาเฉพาะตัวเลข
+                                    TimeCompleted,
+                                    KillsInGame,
+                                    GemReward.." Gems",
+                                    XPReward,
+                                    AllItem,
+                                    tostring(GemPath.Value).." / "..tostring(MaxGems)
+                                ),
+                                type        = "rich",
+                                color       = tonumber(0x33FFCC),
+                                footer      = {
+                                    text     = "PLaNS SHOP ",
+                                    icon_url = "https://cdn.discordapp.com/attachments/1040229055498301511/1055558443076952115/logo.png"
+                                },
+                                thumbnail   = { url = "" },
+                                timestamp   = DateTime.now():ToIsoDate(),
+                            }}
+                        })
+                    })
+                end
+            end
+        end)
+    end
+end
+
+-- =========================================================
+-- (I) ส่วนสร้าง UI ด้วย Lib (ทำปุ่ม/Toggle เหมือนเดิม)
+-- =========================================================
+local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI.lua'))()
+local Window = Library:CreateWindow({
+    Title    = "PLaNS SHOP",
+    Center   = true, 
+    AutoShow = true,
+})
+
+local Tabs    = Window:AddTab('PLaNS x SHOP')
+local GroupBox= Tabs:AddLeftGroupbox('Settings')
+
+-- Toggle White Screen (อ่าน/เขียน LocalData.WhiteScreen)
+local whitescreenToggle = GroupBox:AddToggle('White Screen', {
+    Text    = 'Toggle White Screen',
+    Default = WhiteScreen,  -- ค่าที่เราโหลดมา
+})
+whitescreenToggle:OnChanged(function(value)
+    WhiteScreen = value
+    LocalData.WhiteScreen = value
+    saveSettings(LocalData)
+
+    if value == true then
+        RunService:Set3dRenderingEnabled(false)
     else
-        -- ไม่เคยมี old
-        LocalData["Old Gems"] = currentGems
-        SaveData(LocalData)
+        RunService:Set3dRenderingEnabled(true)
     end
-    -- ถ้าถึงเป้า
-    if (currentGems >= MaxGems) and MaxGems>0 and (not IsSended) then
-        IsSended = true
-        LocalData["Is Sended"] = true
-        SaveData(LocalData)
-        local lv = GetLevelLobby()
-        local desc = string.format(
-            "**𝐍𝐀𝐌𝐄 :** ||%s||\n**💎Gems : %d / %d**\n**Gold : %d**\n**Level : %s**",
-            player.Name,
-            currentGems,
-            MaxGems,
-            player["_stats"]["gold_amount"].Value,
-            lv
-        )
-        SendEndWebhook("ฟาร์มเพชรถึงเป้าแล้ว!", desc)
-    end
-    -- ส่งปกติ
-    SendNormalWebhook("PLaNS SHOP", "**ตอนนี้อยู่ใน Lobby**")
-
-elseif placeId == 8349889591 then
-    -- InGame
-    if (currentGems >= MaxGems) and MaxGems>0 and (not IsSended) then
-        IsSended = true
-        LocalData["Is Sended"] = true
-        SaveData(LocalData)
-        local lv = GetLevelLobby()
-        local desc = string.format(
-            "**𝐍𝐀𝐌𝐄 :** ||%s||\n**💎Gems : %d / %d**\n**Gold : %d**\n**Level : %s**",
-            player.Name,
-            currentGems,
-            MaxGems,
-            player["_stats"]["gold_amount"].Value,
-            lv
-        )
-        SendEndWebhook("ฟาร์มเพชรถึงเป้าแล้ว!", desc)
-    end
-
-    SendNormalWebhook("PLaNS SHOP", "**ตอนนี้อยู่ในด่าน**")
-
-    if OldGems and OldGems~=false then
-        if currentGems < OldGems then
-            local diff = (tonumber(OldGems) or 0) - currentGems
-            MaxGems = MaxGems - diff
-            LocalData["Max Gems"] = MaxGems
-            LocalData["Old Gems"] = currentGems
-            SaveData(LocalData)
-        else
-            LocalData["Old Gems"] = currentGems
-            SaveData(LocalData)
-        end
-    else
-        LocalData["Old Gems"] = currentGems
-        SaveData(LocalData)
-    end
-end
-
--- สร้าง UI
-local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
-local Window = Library:CreateWindow({Title="PLaNS x SHOP",Center=true,AutoShow=true})
-
-local MainTab = Window:AddTab("PLaNS x SHOP")
-local SettingsBox = MainTab:AddLeftGroupbox("Settings")
-
--- White Screen Toggle
-local wst = SettingsBox:AddToggle('White Screen',{Text='Toggle White Screen',Default=WhiteScreen})
-wst:OnChanged(function(val)
-    WhiteScreen = val
-    LocalSettings["White Screen"] = val
-    SaveSettings(LocalSettings)
-    RunService:Set3dRenderingEnabled(not val)
 end)
 
--- Webhook Input
-local wh = SettingsBox:AddInput('Webhook',{
-    Numeric=false,
-    Finished=false,
-    Text='Webhook',
-    Placeholder='https://...',
-    Default=Webhook
-})
--- Max Gems Input
-local mg = SettingsBox:AddInput('Max Gems',{
-    Numeric=true,
-    Finished=false,
-    Text='Max Gems',
-    Placeholder='เป้าหมาย Gems',
-    Default=MaxGems
-})
--- Discord ID
-local di = SettingsBox:AddInput('Discord ID',{
-    Numeric=false,
-    Finished=false,
-    Text='Discord ID',
-    Placeholder='12345678',
-    Default=DiscordID
+-- Input Webhook
+local whInput = GroupBox:AddInput('Webhook', {
+    Numeric     = false,
+    Finished    = false,
+    Text        = 'Webhook',
+    Placeholder = 'Webhook Here!',
+    Default     = Webhook or ""
 })
 
-SettingsBox:AddButton('Save Settings',function()
-    local newWebhook = wh.Value or ""
-    if #newWebhook<8 then
-        warn("Webhook too short")
-        return
+-- Input Max Gems
+local mgInput = GroupBox:AddInput('Max Gems', {
+    Numeric     = true,
+    Finished    = false,
+    Text        = 'Max Gems',
+    Placeholder = 'Max Gems Here!',
+    Default     = MaxGems
+})
+
+-- Input Discord ID
+local diInput = GroupBox:AddInput('Discord ID', {
+    Numeric     = false, 
+    Finished    = false, 
+    Text        = 'Discord ID',
+    Placeholder = 'Discord ID Here!',
+    Default     = DiscordID or ""
+})
+
+-- ปุ่ม Save
+GroupBox:AddButton('Save Settings', function()
+    LocalData.Webhook   = whInput.Value
+    LocalData.MaxGems   = tonumber(mgInput.Value) or 0
+    LocalData.DiscordID = diInput.Value
+    LocalData.IsSended  = false  -- รีเซ็ตให้ส่งได้ใหม่
+
+    -- กรณี OldGems ยังไม่มี ให้เซ็ตเริ่มต้นเป็น currentGem เลย
+    if (LocalData.OldGems or 0) == 0 then
+        pcall(function()
+            LocalData.OldGems = player["_stats"]["gem_amount"].Value
+        end)
     end
-    if not (newWebhook:match("^https?://")) then
-        warn("Must start with https:// or http://")
-        return
-    end
 
-    LocalData["Webhook"]    = newWebhook
-    LocalData["Max Gems"]   = tonumber(mg.Value) or 0
-    LocalData["Discord ID"] = di.Value
-    LocalData["Is Sended"]  = false
+    saveSettings(LocalData)
 
-    if not LocalData["Old Gems"] or (LocalData["Old Gems"]==false) then
-        LocalData["Old Gems"] = 0
-    end
-    SaveData(LocalData)
+    -- อัปเดตตัวแปรในสคริปต์ด้วย
+    Webhook   = LocalData.Webhook
+    MaxGems   = LocalData.MaxGems
+    DiscordID = LocalData.DiscordID
+    IsSended  = LocalData.IsSended
 
-    Webhook  = newWebhook
-    MaxGems  = LocalData["Max Gems"]
-    DiscordID= LocalData["Discord ID"]
-    IsSended = false
-
-    print(string.format("[Saved] Webhook=%s, Max=%d, ID=%s",Webhook,MaxGems,DiscordID))
+    print("[Save] Webhook:", Webhook, "MaxGems:", MaxGems, "DiscordID:", DiscordID)
 end)
 
-print("Final script loaded. ถ้า error => ตรวจว่า Webhook เป็น https://.. หรือ Executor อนุญาต http.request ไหม")
+print("==== Loaded New Script (Refactored) ====")
+print("Settings File =>", SettingsFile)
