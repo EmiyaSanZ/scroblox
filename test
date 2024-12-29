@@ -397,17 +397,25 @@ end
 
 -- ปุ่ม Save
 SettingsBox:AddButton('Save Settings', function()
-    local data = LoadData()  -- โหลดจากไฟล์อีกครั้ง เผื่อมีการแก้ไข
+    local newWebhook = wh.Value or ""
+    -- เช็คว่า newWebhook ขึ้นต้นด้วย http
+    local prefix = string.sub(newWebhook, 1, 4):lower()
+    if prefix ~= "http" then
+        warn("Webhook must start with https:// or http://")
+        return
+    end
+
+    local data = LoadData()
     data["Max Gems"]   = tonumber(mg.Value) or 0
-    data["Webhook"]    = wh.Value
+    data["Webhook"]    = newWebhook
     data["Discord ID"] = di.Value
-    data["Is Sended"]  = false  --รีเซ็ตทุกครั้ง
+    data["Is Sended"]  = false
+
     if not data["Old Gems"] then
         data["Old Gems"] = 0
     end
     SaveData(data)
 
-    -- อัปเดตตัวแปรในสคริปต์
     Webhook   = data["Webhook"]
     MaxGems   = data["Max Gems"]
     DiscordID = data["Discord ID"]
@@ -415,5 +423,6 @@ SettingsBox:AddButton('Save Settings', function()
 
     print("Saved => Webhook="..Webhook..", MaxGems="..MaxGems..", DiscordID="..DiscordID)
 end)
+
 
 print("Merged script loaded successfully!")
