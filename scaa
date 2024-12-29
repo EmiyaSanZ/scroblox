@@ -170,8 +170,8 @@ local currentLevel = GetCurrentLevel()
 sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
-        "NAME : ||**%s**||\n" ..
-        "・Level : **%s**\n" ..
+        "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
+        "・𝐋𝐞𝐯𝐞𝐥  : **%s**\n" ..
         "・เพชรตอนนี้ : **%d**\n" ..
         "・เป้าหมาย (รวม) : **%d**\n\n" ..
         "・ฟามเพชรจำนวน : **%d**",
