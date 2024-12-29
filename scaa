@@ -1,64 +1,77 @@
 --// final_script_immediate_webhook_ui_plus_addgems.lua
-repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("spawn_units")
-repeat wait() until game.Players.LocalPlayer:FindFirstChild("_stats")
+
 --------------------------------------------------------------------------------
--- (A) ส่ง Webhook ทันทีเมื่อสคริปต์รัน (Player, Gems, เป้าหมาย)
+-- (A) ตั้งค่าพื้นฐาน
 --------------------------------------------------------------------------------
 
 if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
-local Players     = game:GetService("Players")
-local RunService  = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-local player      = Players.LocalPlayer
+local Players    = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService= game:GetService("HttpService")
+local player     = Players.LocalPlayer
 
--- Webhook หลัก + WebhookEnd
+--------------------------------------------------------------------------------
+-- (B) ประกาศ Webhook หลัก + WebhookEnd
+--------------------------------------------------------------------------------
+
 _G.Webhook    = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb"
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
+--------------------------------------------------------------------------------
+-- (C) ฟังก์ชัน GetCurrentLevel() (กันกรณีไม่มี spawn_units)
+--------------------------------------------------------------------------------
 
-
-function GetCurrentLevel()
-    local LevelText = Level
-    return string.gsub(LevelText, "Level ", "")
+local function GetCurrentLevel()
+    -- ถ้าหาได้ => คืน string เช่น "410"
+    -- ถ้าหาไม่ได้ => คืน "???"
+    local foundLevel = "รออัพเดต"
+    pcall(function()
+        local spawnUnits = player:WaitForChild("PlayerGui", 5):WaitForChild("spawn_units", 2)
+        local lvlObj = spawnUnits.Lives.Main.Desc:WaitForChild("Level", 2)
+        foundLevel = lvlObj.Text
+    end)
+    -- ตัด "Level " ออก
+    if typeof(foundLevel)=="string" then
+        foundLevel = string.gsub(foundLevel, "Level ", "")
+    end
+    return foundLevel
 end
-function GetNumberFromString(S)
-    return string.match(S,"%d+")
-end
 
 --------------------------------------------------------------------------------
--- (A0) ชื่อไฟล์ JSON = "<PlayerName>_SHOPData.json" (ในโฟลเดอร์หลัก)
+-- (D) ตั้งชื่อไฟล์ JSON = "<PlayerName>_SHOPData.json"
 --------------------------------------------------------------------------------
-local SettingsFile = player.Name.."_SHOPData.json"
 
---------------------------------------------------------------------------------
--- (A1) DefaultData (ถ้าไฟล์ยังไม่มี)
---------------------------------------------------------------------------------
+local SettingsFile = player.Name .. "_SHOPData.json"
+
+-- ค่า Default ถ้าไม่มีไฟล์
 local DefaultData = {
-    MaxGems       = 0, -- เป้าหมายรวม
+    MaxGems       = 0,
     DiscordID     = "",
-    OldGems       = 0, -- Gems เดิม
+    OldGems       = 0,
     IsSended      = false,
-    AddGemsWanted = 0  -- จำนวนที่ต้องการฟาร์มเพิ่ม
+    AddGemsWanted = 0
 }
 
 --------------------------------------------------------------------------------
--- (B) ฟังก์ชันอ่าน/เขียนไฟล์ JSON
+-- (E) ฟังก์ชันโหลด/เซฟไฟล์ JSON
 --------------------------------------------------------------------------------
+
 local function loadSettings()
     if isfile and isfile(SettingsFile) then
         local content = readfile(SettingsFile)
-        local ok, data = pcall(function()
+        local success, data = pcall(function()
             return HttpService:JSONDecode(content)
         end)
-        if ok and type(data)=="table" then
+        if success and type(data)=="table" then
             return data
         else
-            warn("ไฟล์ JSON พัง => สร้างใหม่: "..SettingsFile)
+            warn("ไฟล์ JSON เสียรูปแบบ => สร้างใหม่: " .. SettingsFile)
         end
     end
+    -- ถ้าไม่มีไฟล์หรือ decode ไม่ผ่าน => สร้างใหม่
     if writefile then
         writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
     else
@@ -67,9 +80,9 @@ local function loadSettings()
     return DefaultData
 end
 
-local function saveSettings(tbl)
+local function saveSettings(t)
     if writefile then
-        local s = HttpService:JSONEncode(tbl)
+        local s = HttpService:JSONEncode(t)
         writefile(SettingsFile, s)
     else
         warn("Executor ไม่รองรับ writefile => saveSettings ล้มเหลว")
@@ -77,35 +90,34 @@ local function saveSettings(tbl)
 end
 
 --------------------------------------------------------------------------------
--- (C) โหลดข้อมูล + หา Gems ปัจจุบัน
+-- (F) โหลดข้อมูลจาก JSON + ดึงค่า Gems จาก _stats
 --------------------------------------------------------------------------------
+
 local LocalData = loadSettings()
 
-local MaxGems       = LocalData.MaxGems       or 0
-local DiscordID     = LocalData.DiscordID     or ""
-local OldGems       = LocalData.OldGems       or 0
-local IsSended      = LocalData.IsSended      or false
+local MaxGems       = LocalData.MaxGems or 0
+local DiscordID     = LocalData.DiscordID or ""
+local OldGems       = LocalData.OldGems or 0
+local IsSended      = LocalData.IsSended or false
 local AddGemsWanted = LocalData.AddGemsWanted or 0
-local Level         = LocalData.Level         or 0
 
-local stats  = player:WaitForChild("_stats", 30)
-local gemObj = stats and stats:WaitForChild("gem_amount", 30)
-
+-- หา _stats.gem_amount แบบไม่ล็อกสคริปต์
+local gemObj = nil
 local currentGems = 0
+pcall(function()
+    local stats = player:WaitForChild("_stats", 5)
+    gemObj = stats and stats:WaitForChild("gem_amount", 2)
+end)
 if gemObj and typeof(gemObj.Value)=="number" then
     currentGems = gemObj.Value
 else
     warn("ไม่พบ gem_amount => currentGems=0")
 end
 
-local Level = game:GetService("Players").LocalPlayer.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
-function GetCurrentLevel()
-    local LevelText = Level
-    return string.gsub(LevelText, "Level ", "")
-end
 --------------------------------------------------------------------------------
--- (D) ฟังก์ชันส่ง Webhook
+-- (G) ฟังก์ชันส่ง Webhook / WebhookEnd
 --------------------------------------------------------------------------------
+
 local function sendWebhook(title, desc)
     local req = http_request or request or HttpPost or syn and syn.request
     if not req then
@@ -114,13 +126,11 @@ local function sendWebhook(title, desc)
     end
     local payload = {
         content = "",
-        embeds = {
-            {
-                title = title,
-                description = desc,
-                color = 0x00FF99
-            }
-        }
+        embeds = {{
+            title = title,
+            description = desc,
+            color = 0x00FF99
+        }}
     }
     req({
         Url = _G.Webhook,
@@ -138,13 +148,11 @@ local function sendWebhookEnd(title, desc)
     end
     local payload = {
         content = "<@"..DiscordID.."> <@1014729882833539132>", -- mention
-        embeds = {
-            {
-                title = title,
-                description = desc,
-                color = 0xFF1493
-            }
-        }
+        embeds = {{
+            title = title,
+            description = desc,
+            color = 0xFF1493
+        }}
     }
     req({
         Url = WebhookEnd,
@@ -155,18 +163,20 @@ local function sendWebhookEnd(title, desc)
 end
 
 --------------------------------------------------------------------------------
--- (E) ส่ง Webhook ทันที + ปรับลด MaxGems ถ้าใช้เพชร
+-- (H) ส่ง Webhook ทันที + เช็คปรับ MaxGems เมื่อใช้เพชร
 --------------------------------------------------------------------------------
+
+local currentLevel = GetCurrentLevel()
 sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
-        "𝐍𝐀𝐌𝐄 : ||**%s**||\n" ..
-        "・𝐋𝐞𝐯𝐞𝐥 : **%s**\n" ..
-        "・เพชรตอนนี้ : **%d** <a:8865diamond:1047145579790221433>\n" ..
-        "・เป้าหมาย (รวม) : **%d** <a:8865diamond:1047145579790221433>\n\n" ..
-        "・ฟามเพชรจำนวน : **%d** เพชร",
+        "NAME : ||**%s**||\n" ..
+        "・Level : **%s**\n" ..
+        "・เพชรตอนนี้ : **%d**\n" ..
+        "・เป้าหมาย (รวม) : **%d**\n\n" ..
+        "・ฟามเพชรจำนวน : **%d**",
         player.Name,
-        GetCurrentLevel(),
+        currentLevel,
         currentGems,
         MaxGems,
         AddGemsWanted
@@ -177,14 +187,13 @@ sendWebhook(
 if currentGems < OldGems then
     local diff = OldGems - currentGems
     LocalData.MaxGems = math.max(LocalData.MaxGems - diff, 0)
-    print(string.format("ใช้เพชร %d => MaxGems เหลือ %d", diff, LocalData.MaxGems))
+    print("ใช้เพชร", diff, "=> MaxGems =", LocalData.MaxGems)
 elseif currentGems > OldGems then
-    print(string.format("ได้เพชรเพิ่ม %d => OldGems: %d -> %d", currentGems - OldGems, OldGems, currentGems))
+    print("ได้เพชรเพิ่ม", currentGems - OldGems, "=> OldGems:", OldGems, "->", currentGems)
 end
-
 LocalData.OldGems = currentGems
 
--- ถ้า Gems ถึงเป้า => ส่ง WebhookEnd
+-- ถ้าถึงเป้า => ส่ง WebhookEnd
 if currentGems >= LocalData.MaxGems
    and LocalData.MaxGems > 0
    and (not LocalData.IsSended)
@@ -192,9 +201,9 @@ then
     sendWebhookEnd(
         "- ฟามเสร็จแล้วจ้า <a:9828pinkpixelheart:1021714314446508082>",
         string.format(
-            "- ผู้เล่น ||**%s**|| \n-𝐋𝐞𝐯𝐞𝐥 : **%s**\n- มี %d / %d เพชรแล้ว <a:8865diamond:1047145579790221433>\n- ฟามเพชรจำนวน %d เพชร\n- ฟามเสร็จแล้วกรุณาเปลี่ยนรหัสผ่าน!",
+            "- ผู้เล่น ||%s|| \n- Level: **%s**\n- มี %d / %d เพชรแล้ว\n- ฟามเพชรจำนวน %d เพชร\n- ฟามเสร็จแล้วเปลี่ยนรหัสผ่าน!",
             player.Name,
-            GetCurrentLevel(),
+            currentLevel,
             currentGems,
             LocalData.MaxGems,
             AddGemsWanted
@@ -206,41 +215,40 @@ end
 saveSettings(LocalData)
 
 --------------------------------------------------------------------------------
--- (F) UI (Lib): ผู้ใช้กรอก “Add Gems” (จำนวนที่ต้องการเพิ่ม) → MaxGems = current + addGemsWanted
+-- (I) สร้าง UI (Lib) : "Add Gems" => MaxGems = currentGems + AddGemsWanted
 --------------------------------------------------------------------------------
+
 local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
 local Window  = Library:CreateWindow({
     Title    = "PLaNS x SHOP",
     Center   = true,
-    AutoShow = false, -- เริ่มต้นแสดง UI ทันที
+    AutoShow = false, -- ซ่อนตั้งแต่แรก
 })
 
 local MainTab     = Window:AddTab("PLaNS x SHOP")
 local SettingsBox = MainTab:AddLeftGroupbox("Settings")
 
--- ช่อง “ต้องการฟาร์มเพิ่มกี่เพชร”
+-- Input “Add Gems”
 local addGemsInput = SettingsBox:AddInput('Add Gems', {
     Numeric     = true,
     Finished    = false,
     Text        = 'ต้องการเพิ่มกี่เพชร?',
-    Placeholder = 'ใส่จำนวนเพชรที่จะฟาม',
+    Placeholder = 'Ex: 20000',
     Default     = AddGemsWanted
 })
 
--- ช่อง Discord ID
+-- Input “Discord ID”
 local di = SettingsBox:AddInput('Discord ID', {
     Numeric     = false,
     Finished    = false,
     Text        = 'Discord ID',
-    Placeholder = 'ใส่ Discord ID',
+    Placeholder = 'Ex: 12345678',
     Default     = DiscordID
 })
 
--- ปุ่ม Save Settings
+-- ปุ่ม Save
 SettingsBox:AddButton('Save Settings', function()
     local addGemsNum = tonumber(addGemsInput.Value) or 0
-
-    -- MaxGems = currentGems + addGemsNum
     LocalData.MaxGems       = currentGems + math.max(addGemsNum, 0)
     LocalData.DiscordID     = di.Value
     LocalData.AddGemsWanted = addGemsNum
@@ -254,63 +262,57 @@ SettingsBox:AddButton('Save Settings', function()
     end
 
     saveSettings(LocalData)
-
-    print(string.format(
-        "[SaveSettings] AddGemsWanted=%d => MaxGems=%d (current=%d), DiscordID=%s",
-        addGemsNum, LocalData.MaxGems, currentGems, LocalData.DiscordID
-    ))
+    print(string.format("[Save] AddGemsWanted=%d => MaxGems=%d, DiscordID=%s", addGemsNum, LocalData.MaxGems, LocalData.DiscordID))
 end)
 
--- ปุ่ม Test Webhook
+-- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
-    local testDesc = string.format(
-        "ทดสอบแจ้งเตือน!\nผู้เล่น : ||%s||\nเพชรตอนนี้ : %d\nเป้าหมายทั้งหมด : %d\n(ยอดฟาร์มเพชร : %d)",
+    local testStr = string.format(
+        "ทดสอบจ้า!\nPlayer: %s\nLevel: %s\nGemsNow: %d\nGoal: %d\nAddWanted: %d",
         player.Name,
+        GetCurrentLevel(),
         currentGems,
         LocalData.MaxGems,
         LocalData.AddGemsWanted
     )
-    sendWebhook("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testDesc)
+    sendWebhook("ทดสอบแจ้งเตือนๆ", testStr)
 end)
 
--- Toggle White Screen (ถ้าต้องการ)
+-- Toggle White Screen
 SettingsBox:AddLabel("Optional UI Toggles")
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
     Text    = 'Toggle White Screen',
-    Default = true,
+    Default = false,
 })
-WhiteScreenToggle:OnChanged(function(value)
-    RunService:Set3dRenderingEnabled(not value)
+WhiteScreenToggle:OnChanged(function(v)
+    RunService:Set3dRenderingEnabled(not v)
 end)
 
 --------------------------------------------------------------------------------
--- (G) ปุ่มไอคอน Toggle UI
+-- (J) ปุ่มไอคอน Toggle UI
 --------------------------------------------------------------------------------
 do
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "UI_ToggleButton"
     ScreenGui.ResetOnSpawn = false
-
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     ScreenGui.DisplayOrder = 9999
 
-    --ScreenGui.Parent = game.CoreGui or player:WaitForChild("PlayerGui")
-    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    -- ลองใส่ Parent = player:WaitForChild("PlayerGui")
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
     local ToggleButton = Instance.new("ImageButton")
     ToggleButton.Name = "ToggleButton"
     ToggleButton.Size = UDim2.new(0, 50, 0, 50)
     ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
     ToggleButton.BackgroundTransparency = 1
-    ToggleButton.Image = "rbxassetid://3570695787" -- เปลี่ยนรูปได้ตามต้องการ
+    ToggleButton.Image = "rbxassetid://3570695787"
     ToggleButton.Parent = ScreenGui
 
     ToggleButton.MouseButton1Click:Connect(function()
-        -- เรียกฟังก์ชัน Toggle ของ Lib
-        Library.Toggle() 
-        -- ไลบรารีนี้มีฟังก์ชัน Library.Toggle() อยู่แล้ว 
-        -- ซึ่งจะสลับ Visible ของหน้าต่างหลักให้
+        -- Toggle UI
+        Library.Toggle()
     end)
 end
 
-print("Script loaded: <PlayerName>_SHOPData.json + ฟังก์ชันหัก MaxGems + ปุ่ม Toggle UI, All set!")
+print("Script loaded successfully! No infinite waits for spawn_units, plus UI with toggle icon, done!")
