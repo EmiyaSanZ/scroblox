@@ -16,7 +16,7 @@ local ThumbnailURL = nil
 
 local ThumbnailRequest = http.request(
     {
-        Url = "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds="..tostring(game.Players.LocalPlayer.UserId).."&size=420x420&format=Png&isCircular=false",
+        Url = "https://thumbnails.roblox.com/v1/users/avatar?userIds="..tostring(game.Players.LocalPlayer.UserId).."&size=420x420&format=Png&isCircular=false",
         Method = "GET",
         Headers = {
             ["Content-Type"] = "application/json"
