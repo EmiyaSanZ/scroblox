@@ -180,7 +180,7 @@ end
 sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
-        "NAME : **%s**\n" ..
+        "NAME : ||**%s**||\n" ..
         "・Level : **%s**\n" ..
         "・เพชรตอนนี้ : **%d**\n" ..
         "・เป้าหมาย (รวม) : **%d**\n\n" ..
@@ -211,7 +211,7 @@ then
     sendWebhookEnd(
         "- ฟามเสร็จแล้วจ้า <a:9828pinkpixelheart:1021714314446508082>",
         string.format(
-            "- ผู้เล่น %s\n- Level: %s\n- มี %d / %d เพชร\n- ฟามเพชรทั้งหมด %d เพชร\n- ฟามเสร็จแล้วเปลี่ยนรหัสผ่าน!",
+            "- ผู้เล่น ||%s||\n- Level: %s\n- มี %d / %d เพชร\n- ฟามเพชรทั้งหมด %d เพชร\n- ฟามเสร็จแล้วเปลี่ยนรหัสผ่าน!",
             player.Name,
             currentLevel,
             currentGems,
@@ -278,7 +278,7 @@ end)
 -- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
-        "ทดสอบ!\nPlayer: %s\nLevel: %s\nGemsNow: %d\nGoal: %d\nAddWanted: %d",
+        "ทดสอบ!\nPlayer: ||%s||\nLevel: %s\nGemsNow: %d\nGoal: %d\nAddWanted: %d",
         player.Name,
         currentLevel,  -- ใช้ Level ล่าสุด (อาจเป็นของใหม่ ถ้าหาเจอ)
         currentGems,
