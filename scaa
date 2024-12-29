@@ -1,5 +1,6 @@
 --// final_script_immediate_webhook_ui_plus_addgems.lua
-
+repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("spawn_units")
+repeat wait() until game.Players.LocalPlayer:FindFirstChild("_stats")
 --------------------------------------------------------------------------------
 -- (A) ส่ง Webhook ทันทีเมื่อสคริปต์รัน (Player, Gems, เป้าหมาย)
 --------------------------------------------------------------------------------
