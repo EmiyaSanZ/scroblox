@@ -28,7 +28,7 @@ local SettingsFile = player.Name .. "_SHOPData.json"
 -- =========================================================
 local DefaultData = {
     -- ส่วน Settings หลัก
-    ["WhiteScreen"] = false,
+    ["WhiteScreen"] = true,
 
     -- ส่วนข้อมูลการแจ้ง Webhook
     ["Webhook"]     = nil,
@@ -112,7 +112,8 @@ end
 -- =========================================================
 -- (G) Get Thumbnail
 -- =========================================================
-local thumbRequest = nil
+local thumbRequest = syn and syn.request or request or http_request
+
 pcall(function()
     thumbRequest = syn and syn.request or request or http_request
 end)
@@ -240,14 +241,6 @@ if Webhook and WebhookEnd then
                 ["Level"] = LevelNow,
             }
 
-            -- ไล่เช็คของใน _FX_CACHE
-            local fxCache = game:GetService("ReplicatedStorage")["_FX_CACHE"]
-            for _, v in ipairs(fxCache:GetChildren()) do
-                if v:IsA("ImageButton") then
-                    -- ตัวอย่างการเช็ค
-                    -- (สามารถเพิ่ม logic เก็บเป็น string ได้ตามต้นฉบับ)
-                end
-            end
 
             -- ส่ง Webhook
             if thumbRequest then
