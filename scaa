@@ -330,7 +330,7 @@ end)
 -- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
-        "ทดสอบ!\nผู้เล่น : ||%s||\nทอง : %d\nเลเวล : %s\nเพชรตอนนี้ : %d\nเป้าหมาย : %d\n\n```md\n#แพคเก็ทที่จ้าง\n- จำนวน : %d เพชร```",
+        "ทดสอบ!\nผู้เล่น : ||%s||\nทอง : %d\nเลเวล : %s\nเพชรตอนนี้ : %d\nเป้าหมาย : %d\n\n```md\n#แพคเกจที่จ้าง\n- จำนวน : %d เพชร```",
         player.Name,
         currentGold,
         currentLevel,  -- ใช้ Level ล่าสุด (อาจเป็นของใหม่ ถ้าหาเจอ)
