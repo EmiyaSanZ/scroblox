@@ -352,9 +352,17 @@ SettingsBox:AddButton('Save Settings', function()
     end
 
     saveSettings(LocalData)
-    print(string.format("[Save] AddGemsWanted=%d => MaxGems=%d, DiscordID=%s", addGemsNum, LocalData.MaxGems, LocalData.DiscordID))
+
+    -- << อัปเดตตัวแปร DiscordID ระดับสคริปต์ด้วย >>
+    DiscordID = di.Value    -- <<--- เพิ่มบรรทัดนี้
+    
+    print(string.format(
+        "[Save] AddGemsWanted=%d => MaxGems=%d, DiscordID=%s",
+        addGemsNum, LocalData.MaxGems, LocalData.DiscordID
+    ))
 end)
 
+local dd = LocalData.DiscordID or ""
 -- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
@@ -366,7 +374,7 @@ SettingsBox:AddButton('Test Webhook', function()
         LocalData.MaxGems,
         LocalData.AddGemsWanted
     )
-    sendWebhook2("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testStr)
+    sendWebhook2("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testStr .. dd)
 end)
 
 -- Toggle White Screen
