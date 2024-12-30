@@ -50,6 +50,8 @@ local DefaultData = {
     AddGemsWanted = 0,
 
     SavedLevel    = "???",  -- <--- เพิ่มฟิลด์เก็บเลเวลล่าสุด (default ???)
+    SavedBP       = "???",   -- <<-- เพิ่มฟิลด์เก็บค่า BP ใหม่
+    SavedBP2       = "???"
 }
 
 --------------------------------------------------------------------------------
@@ -98,6 +100,8 @@ local OldGems       = LocalData.OldGems or 0
 local IsSended      = LocalData.IsSended or false
 local AddGemsWanted = LocalData.AddGemsWanted or 0
 local SavedLevel    = LocalData.SavedLevel or "???"
+local SavedBP       = LocalData.SavedBP or "???"
+local SavedBP2       = LocalData.SavedBP2 or "???"
 
 --------------------------------------------------------------------------------
 -- (F) ลองหา _stats.gem_amount (กันสคริปต์ไม่บล็อก)
@@ -156,6 +160,61 @@ local function TryGetLevelOrSaved()
 end
 
 local currentLevel = TryGetLevelOrSaved()
+
+--------------------------------------------------------------------------------
+-- (G2) ฟังก์ชันหาค่า Battle Pass Level (BP) + เก็บเป็น SavedBP
+--------------------------------------------------------------------------------
+
+local function TryGetBPOrSaved()
+    local foundBP = nil
+    pcall(function()
+        -- ตัวอย่างโครงสร้าง GUI สมมุติว่าอยู่ใน PlayerGui.BattlePass.Main.Level.V
+        local bpGui   = player:WaitForChild("PlayerGui", 5):WaitForChild("BattlePass", 2)
+        local mainFrm = bpGui:WaitForChild("Main", 2)
+        local lvFrm   = mainFrm:WaitForChild("Level", 2)
+        local vLbl    = lvFrm:WaitForChild("V", 2)  -- สมมุติ Label ชื่อ V
+        foundBP = vLbl.Text  -- เช่น "50"
+    end)
+
+    if not foundBP then
+        return SavedBP  -- ถ้าหาไม่เจอ => ใช้ค่าที่เซฟไว้ก่อนหน้า
+    end
+    if foundBP == "99" then
+        return SavedBP
+    end
+    LocalData.SavedBP = foundBP
+    saveSettings(LocalData)
+    return foundBP
+end
+
+local currentBP = TryGetBPOrSaved()
+--------------------------------------------------------------------------------
+-- (G3) ฟังก์ชันหาค่า Battle Pass Level (BP) + เก็บเป็น SavedBP2
+--------------------------------------------------------------------------------
+
+local function TryGetBPOrSaved2()
+    local foundBP2 = nil
+    pcall(function()
+        -- ตัวอย่างโครงสร้าง GUI สมมุติว่าอยู่ใน Player.PlayerGui.BattlePass.Main.FurthestRoom.V.Text,
+        local bpGui2   = player:WaitForChild("PlayerGui", 5):WaitForChild("BattlePass", 2)
+        local mainFrm2 = bpGui2:WaitForChild("Main", 2)
+        local lvFrm2   = mainFrm2:WaitForChild("FurthestRoom", 2)
+        local vLbl2    = lvFrm2:WaitForChild("V", 2)  -- สมมุติ Label ชื่อ V
+        foundBP2 = vLbl2.Text  -- เช่น "50"
+    end)
+
+    if not foundBP2 then
+        return SavedBP2  -- ถ้าหาไม่เจอ => ใช้ค่าที่เซฟไว้ก่อนหน้า
+    end
+    if foundBP2 == "100000" or foundBP2 == "100000/100000" then
+        return SavedBP2
+    end
+    LocalData.SavedBP2 = foundBP2
+    saveSettings(LocalData)
+    return foundBP2
+end
+
+local currentBP2 = TryGetBPOrSaved2()
 
 --------------------------------------------------------------------------------
 -- (H) ฟังก์ชันส่ง Webhook และ WebhookEnd
@@ -249,6 +308,7 @@ sendWebhook(
         "```md\n#Profile\n" ..
         "🟡・ทอง : %d\n" ..
         "🧪・เลเวล : %s\n" ..
+        "🔋・แบทเทินพาส : %s [%s]\n"..
         "💎・เพชรตอนนี้ : %d\n" ..
         "- เพชรที่ต้องฟาม : [%d|%d]\n" ..
         "```\n" ..
@@ -257,6 +317,8 @@ sendWebhook(
         player.Name,
         currentGold,
         currentLevel,
+        currentBP,
+        currentBP2,
         currentGems,
         currentGems,
         MaxGems,
@@ -288,14 +350,17 @@ then
             "💎・เพชรตอนนี้ : %d\n" ..
             "🟡・ทอง : %d\n" ..
             "🧪・เลเวล : %s\n" ..
+            "🔋・แบทเทินพาส : %s [%s]\n"..
             "- เพชรที่ได้ครบแล้ว : [%d|%d]\n" ..
             "```\n" ..
-            "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎 ```\n\n",
+            "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎 ```\n\n" ..
             "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
             player.Name,
             currentGems,
             currentGold,
             currentLevel,
+            currentBP,
+            currentBP2,
             currentGems,
             MaxGems,
             AddGemsWanted
@@ -368,10 +433,12 @@ local dd = LocalData.DiscordID or ""
 -- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
-        "ทดสอบ!\nผู้เล่น : ||%s||\nทอง : %d\nเลเวล : %s\nเพชรตอนนี้ : %d\nเป้าหมาย : %d\n\n```md\n#แพคเกจที่จ้าง\n- จำนวน : %d เพชร```",
+        "ทดสอบ!\nผู้เล่น : ||%s||\n- ทอง : %d\n- เลเวล : %s\n- เวลแบทเทินพาส : %s [%s]\n- เพชรตอนนี้ : %d\n- เป้าหมาย : %d\n\n```md\n#แพคเกจที่จ้าง\n- จำนวน : %d เพชร```",
         player.Name,
         currentGold,
         currentLevel,  -- ใช้ Level ล่าสุด (อาจเป็นของใหม่ ถ้าหาเจอ)
+        currentBP,
+        currentBP2,
         currentGems,
         LocalData.MaxGems,
         LocalData.AddGemsWanted
