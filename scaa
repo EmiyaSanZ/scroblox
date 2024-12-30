@@ -165,7 +165,30 @@ local function sendWebhook(title, desc)
         Body = HttpService:JSONEncode(payload)
     })
 end
-
+--------------------------------------------------------------------------------
+local function sendWebhook2(title, desc)
+    local req = http_request or request or HttpPost or syn and syn.request
+    if not req then
+        warn("ไม่มีฟังก์ชัน request => sendWebhook ล้มเหลว")
+        return
+    end
+    local payload = {
+        content = "<@"..DiscordID.."> <@&1014729882833539132>",
+        embeds = {{
+            title = title,
+            description = desc,
+            color = 0xFF1493,
+            image = { url = ThumbnailURL }
+        }}
+    }
+    req({
+        Url = _G.Webhook,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(payload)
+    })
+end
+--------------------------------------------------------------------------------
 local function sendWebhookEnd(title, desc)
     local req = http_request or request or HttpPost or syn and syn.request
     if not req then
@@ -301,7 +324,7 @@ SettingsBox:AddButton('Test Webhook', function()
         LocalData.MaxGems,
         LocalData.AddGemsWanted
     )
-    sendWebhookEnd("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testStr)
+    sendWebhook2("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testStr)
 end)
 
 -- Toggle White Screen
