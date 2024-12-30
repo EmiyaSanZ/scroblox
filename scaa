@@ -1,5 +1,6 @@
 --// final_script_immediate_webhook_ui_plus_addgems.lua
-
+repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("spawn_units")
+repeat wait() until game.Players.LocalPlayer:FindFirstChild("_stats")
 --------------------------------------------------------------------------------
 -- (A) ตั้งค่าพื้นฐาน
 --------------------------------------------------------------------------------
@@ -114,13 +115,22 @@ else
     warn("ไม่พบ gem_amount => currentGems=0")
 end
 
-local GoldPath = stats and stats:WaitForChild("gold_amount", 2)
+
+
+-- ลองโหลด gold_amount แบบ pcall กัน error
+local stats = player:WaitForChild("_stats", 5)
+local goldObj
 local currentGold = 0
-if GoldPath and typeof(GoldPath.Value)=="number" then
-    currentGold = GoldPath.Value
+pcall(function()
+    goldObj = stats and stats:WaitForChild("gold_amount", 2)
+end)
+if goldObj and typeof(goldObj.Value)=="number" then
+    currentGold = goldObj.Value
 else
-    warn("ไม่พบ gold_amount => currentGold=0")
+    warn("ไม่พบ gold_amount => currentGold=0, อาจต้องเช็กชื่อ field ใน _stats อีกที")
 end
+
+print("Current gold:", currentGold)
 
 --------------------------------------------------------------------------------
 -- (G) หาค่า Level (spawn_units) + อัปเดตลง JSON ถ้าหาเจอ
