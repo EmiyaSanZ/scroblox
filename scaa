@@ -173,7 +173,7 @@ local function sendWebhookEnd(title, desc)
         return
     end
     local payload = {
-        content = "<@"..DiscordID.."> <@1014729882833539132>", 
+        content = "<@"..DiscordID.."> <@&1014729882833539132>", 
         embeds = {{
             title = title,
             description = desc,
@@ -301,7 +301,7 @@ SettingsBox:AddButton('Test Webhook', function()
         LocalData.MaxGems,
         LocalData.AddGemsWanted
     )
-    sendWebhook("ทดสอบแจ้งเตือนๆ", testStr)
+    sendWebhookEnd("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testStr)
 end)
 
 -- Toggle White Screen
