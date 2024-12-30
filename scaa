@@ -160,6 +160,8 @@ local currentLevel = TryGetLevelOrSaved()
 --------------------------------------------------------------------------------
 -- (H) ฟังก์ชันส่ง Webhook และ WebhookEnd
 --------------------------------------------------------------------------------
+local LogoURLs = "https://cdn.discordapp.com/attachments/1082245350166892554/1323232911272448010/logo.png?ex=6773c42e&is=677272ae&hm=73bbda78feab2829609946c3dced71b8e6f9f544c3888a019a1ae5f304332588&"
+
 
 local function sendWebhook(title, desc)
     local req = http_request or request or HttpPost or syn and syn.request
@@ -173,7 +175,9 @@ local function sendWebhook(title, desc)
             title = title,
             description = desc,
             color = 0x00FF99,
-            image = { url = ThumbnailURL }
+            image = { url = ThumbnailURL },
+            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
+            timestamp = DateTime.now():ToIsoDate()
         }}
     }
     req({
@@ -196,7 +200,9 @@ local function sendWebhook2(title, desc)
             title = title,
             description = desc,
             color = 0xFF1493,
-            image = { url = ThumbnailURL }
+            image = { url = ThumbnailURL },
+            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
+            timestamp = DateTime.now():ToIsoDate()
         }}
     }
     req({
@@ -219,7 +225,9 @@ local function sendWebhookEnd(title, desc)
             title = title,
             description = desc,
             color = 0xFF1493,
-            image = { url = ThumbnailURL }
+            image = { url = ThumbnailURL },
+            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
+            timestamp = DateTime.now():ToIsoDate()
         }}
     }
     req({
@@ -280,7 +288,8 @@ then
             "🧪・เลเวล : %s\n" ..
             "- เพชรที่ได้ครบแล้ว : [%d|%d]\n" ..
             "```\n" ..
-            "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎 ```",
+            "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎 ```\n\n",
+            "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
             player.Name,
             currentGems,
             currentGold,
