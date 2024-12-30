@@ -248,9 +248,9 @@ if currentGems >= LocalData.MaxGems
    and (not LocalData.IsSended)
 then
     sendWebhookEnd(
-        "- ฟามเสร็จแล้วจ้า <a:9828pinkpixelheart:1021714314446508082>",
+        "- ฟามเสร็จแล้วจ้า เปลี่ยนรหัสผ่านด้วยนะ <a:9828pinkpixelheart:1021714314446508082>",
         string.format(
-            "- ผู้เล่น ||%s||\n- Level: %s\n- มี %d / %d เพชร\n- ฟามเพชรทั้งหมด %d เพชร\n- ฟามเสร็จแล้วเปลี่ยนรหัสผ่าน!",
+            "- ผู้เล่น ||%s||\n- Level: %s\n- มี %d / %d เพชร\n- ฟามเพชรทั้งหมด %d เพชร\n\n\nอย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
             player.Name,
             currentLevel,
             currentGems,
@@ -317,7 +317,7 @@ end)
 -- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
-        "ทดสอบ!\nPlayer: ||%s||\nLevel: %s\nGemsNow: %d\nGoal: %d\nAddWanted: %d",
+        "ทดสอบ!\nผู้เล่น : ||%s||\nเลเวล : %s\nเพชรตอนนี้ : %d\nเป้าหมาย : %d\n\n```md\n#แพคเก็ทที่จ้าง\nจำนวน : %d เพชร```",
         player.Name,
         currentLevel,  -- ใช้ Level ล่าสุด (อาจเป็นของใหม่ ถ้าหาเจอ)
         currentGems,
