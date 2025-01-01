@@ -451,7 +451,7 @@ if GameFinished then
                 .. "```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficuty : %s\n- Wave : %s | %s```\n"
                 .. "```md\n#Enemies Killed\n- %d```\n"
                 .. "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"
-                .. "```เพชรรวม・%s|%d💎```"
+                .. "```💎・เพชรที่ต้องฟาม : [%d|%d]```"
 
             local finalDesc = string.format(
                 descFormat,
@@ -507,7 +507,7 @@ if GameFinished then
     -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
     RunService.Stepped:Connect(function()
         if GameFinished.Value == true then
-            task.delay(3, function()
+            task.delay(4, function()
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
