@@ -447,7 +447,7 @@ if GameFinished then
             end
 
             -- สร้างคำอธิบายสำหรับ Webhook
-            local descFormat = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level: %s```\n"
+            local descFormat = "🔒・Username : ||%s||\n```md\n#Profile\n💎・Gems : %s\n🟡・Golds : %s\n🧪・Level: %s\n🔋・แบทเทินพาส : %s [%s]```\n"
                 .. "```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficuty : %s\n- Wave : %s | %s```\n"
                 .. "```md\n#Enemies Killed\n- %d```\n"
                 .. "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"
@@ -459,6 +459,8 @@ if GameFinished then
                 GemPath and GemPath.Value or "N/A",
                 GoldPath and GoldPath.Value or "N/A",
                 GetCurrentLevel(),
+                currentBP,
+                currentBP2,
                 InfoGameEnd or "N/A",
                 (TitlePath and TitlePath.Text or "N/A") .. " : " .. (DescPath and DescPath.Text or "N/A"),
                 DiffPath and DiffPath.Text or "N/A",
@@ -479,10 +481,12 @@ if GameFinished then
                     content = "",
                     embeds = {
                         {
-                            title = "**Game Finished**",
+                            title = "** <a:lp:1054740345709146182>  เล่นจบแล้วจ้า <a:lp:1054740345709146182>  **",
                             description = finalDesc,
                             type = "rich",
                             color = 0x33FFCC,
+                            image = { url = ThumbnailURL },
+                            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
                             timestamp = DateTime.now():ToIsoDate()
                         }
                     }
