@@ -302,7 +302,7 @@ end
 -- (I) ส่ง Webhook ทันที + เช็คปรับ MaxGems
 --------------------------------------------------------------------------------
 
-sendWebhook(
+--[[sendWebhook(
     "PLaNS x เช็คเพชร",
     string.format(
         "🔒・Username : ||**%s**||\n" ..
@@ -326,7 +326,7 @@ sendWebhook(
         AddGemsWanted,
         DiscordID
     )
-)
+)]]
 
 -- ถ้าผู้เล่นใช้เพชร => หักจาก MaxGems
 if currentGems < OldGems then
@@ -355,7 +355,7 @@ then
             "- เพชรที่ได้ครบแล้ว : [%d|%d]\n" ..
             "```\n" ..
             "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎 ```\n\n" ..
-            "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n<#1009544224720568371>\n<#1021662378250752080>\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
+            "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n[ฝาก +1 โปร์ไฟล์เฟสด้วยงับ](https://www.facebook.com/photo/?fbid=817544902138722&set=a.117678525458700)\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
             player.Name,
             currentGems,
             currentGold,
@@ -447,11 +447,12 @@ if GameFinished then
             end
 
             -- สร้างคำอธิบายสำหรับ Webhook
-            local descFormat = "🔒・Username : ||%s||\n```md\n#Profile\n💎・Gems : %s\n🟡・Golds : %s\n🧪・Level: %s\n🔋・แบทเทินพาส : %s [%s]```\n"
-                .. "```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficuty : %s\n- Wave : %s | %s```\n"
+            local descFormat = "🔒・Username : ||%s||\n```md\n#Profile\n💎・เพชร : %s\n🟡・ทอง : %s\n🧪・เลเวล: %s\n🔋・แบทเทินพาส : %s [%s]```\n"
+                .. "```md\n#Game Infomation\n- ผลการเล่น : %s\n- แมพ : %s\n- ความยาก : %s\n- เวฟ : %s | %s```\n"
                 .. "```md\n#Enemies Killed\n- %d```\n"
                 .. "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"
-                .. "```💎・เพชรที่ต้องฟาม : [%d|%d]```"
+                .. "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎\n- เพชรที่ต้องฟาม : [%d|%d]```\n"
+                .. "- จ้างโดยคุณ: <@%s>"
 
             local finalDesc = string.format(
                 descFormat,
@@ -462,7 +463,7 @@ if GameFinished then
                 currentBP,
                 currentBP2,
                 InfoGameEnd or "N/A",
-                (TitlePath and TitlePath.Text or "N/A") .. " : " .. (DescPath and DescPath.Text or "N/A"),
+                (TitlePath and TitlePath.Text or "N/A") .. "\n- โหมด : " .. (DescPath and DescPath.Text or "N/A"),
                 DiffPath and DiffPath.Text or "N/A",
                 GetNum(WaveCompleted) or "0",
                 TimeCompleted or "N/A",
@@ -470,8 +471,10 @@ if GameFinished then
                 Gem or "N/A",
                 XP or "N/A",
                 AllItem,
+                AddGemsWanted,
                 tostring(TotalGems or 0),
-                MaxGems
+                MaxGems,
+                DiscordID
             )
 
             -- ส่ง Webhook
@@ -507,7 +510,7 @@ if GameFinished then
     -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
     RunService.Stepped:Connect(function()
         if GameFinished.Value == true then
-            task.delay(4, function()
+            task.delay(3.5, function()
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
