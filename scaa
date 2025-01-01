@@ -33,6 +33,7 @@ print(ThumbnailURL)
 --------------------------------------------------------------------------------
 
 _G.Webhook    = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb"
+_G.Webhook2    = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
 --------------------------------------------------------------------------------
@@ -371,6 +372,150 @@ end
 
 saveSettings(LocalData)
 
+-- เรียกใช้งาน RunService
+local RunService = game:GetService("RunService")
+
+-- ฟังก์ชันรอ GameFinished
+local function WaitForGameFinished()
+    local GameFinished
+    pcall(function()
+        -- รอจนกว่า "_DATA" จะมีอยู่ใน Workspace
+        local DataFolder = game:GetService("Workspace"):WaitForChild("_DATA", 10)
+        if DataFolder then
+            GameFinished = DataFolder:WaitForChild("GameFinished", 10)
+        end
+    end)
+    if not GameFinished then
+        warn("ไม่พบ GameFinished ใน Workspace")
+    end
+    return GameFinished
+end
+
+-- เรียกใช้งาน WaitForGameFinished เพื่อหาตัวแปร GameFinished
+local GameFinished = WaitForGameFinished()
+
+-- ตัวแปรเพื่อป้องกันการส่ง Webhook ซ้ำ
+local WebhookSent = false
+
+if GameFinished then
+    -- ฟังก์ชันที่ใช้ส่ง Webhook
+    local function SendGameFinishedWebhook()
+        -- เช็ค GameFinished.Value
+        if GameFinished.Value == true and not WebhookSent then
+            -- ตั้งค่าว่า Webhook ถูกส่งแล้ว
+            WebhookSent = true
+
+            --task.wait(2)
+            -- ตัวอย่าง: เก็บข้อมูลและส่ง Webhook
+            local Player = game:GetService("Players").LocalPlayer
+            local Level, Gem, GemPath, GoldPath, XP, TitlePath, DescPath, DiffPath
+            local WaveCompleted, TimeCompleted, TotalGems, InfoGameEnd, KillsInGame = nil
+            local AllItem = ""
+
+            -- ใช้ pcall เพื่อดึงข้อมูลและหลีกเลี่ยงข้อผิดพลาด
+            pcall(function()
+                Level = Player.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+                Gem = Player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
+                GemPath = Player["_stats"]["gem_amount"]
+                GoldPath = Player["_stats"]["gold_amount"]
+                XP = Player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text
+                TitlePath = Player.PlayerGui.NewArea.holder.areaTitle
+                DescPath = Player.PlayerGui.NewArea.holder.areaDescription
+                DiffPath = Player.PlayerGui.NewArea.holder.Difficulty
+                WaveCompleted = Player.PlayerGui.ResultsUI.Holder.Middle.WavesCompleted.Text
+                TimeCompleted = Player.PlayerGui.ResultsUI.Holder.Middle.Timer.Text
+                TotalGems = GemPath.Value
+                InfoGameEnd = Player.PlayerGui.ResultsUI.Holder.Title.Text
+                KillsInGame = Player["_stats"].kills.Value
+
+                -- ดึงข้อมูลไอเทมที่ได้รับ
+                local HatchInfo = Player.PlayerGui.HatchInfo
+                if HatchInfo and HatchInfo:FindFirstChild("holder") and HatchInfo.holder:FindFirstChild("info1") then
+                    HatchInfo.holder.info1.UnitName:GetPropertyChangedSignal("Text"):Connect(function()
+                        local ItemName = HatchInfo.holder.info1.UnitName.Text
+                        AllItem = AllItem .. "◈ " .. ItemName .. "\n"
+                    end)
+                end
+            end)
+
+            local function GetCurrentLevel()
+                return (string.gsub(Level or "Level ???", "Level ", ""))
+            end
+
+            local function GetNum(str)
+                return string.match(str, "%d+")
+            end
+
+            -- สร้างคำอธิบายสำหรับ Webhook
+            local descFormat = "🔒 Username : ||%s||\n```md\n#Profile\n💎 Gems : %s\n🟡 Golds : %s\n🧪 Level: %s```\n"
+                .. "```md\n#Game Infomation\n- Game : %s\n- Map : %s\n- Difficuty : %s\n- Wave : %s | %s```\n"
+                .. "```md\n#Enemies Killed\n- %d```\n"
+                .. "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"
+                .. "```เพชรรวม・%s|%d💎```"
+
+            local finalDesc = string.format(
+                descFormat,
+                Player.Name,
+                GemPath and GemPath.Value or "N/A",
+                GoldPath and GoldPath.Value or "N/A",
+                GetCurrentLevel(),
+                InfoGameEnd or "N/A",
+                (TitlePath and TitlePath.Text or "N/A") .. " : " .. (DescPath and DescPath.Text or "N/A"),
+                DiffPath and DiffPath.Text or "N/A",
+                GetNum(WaveCompleted) or "0",
+                TimeCompleted or "N/A",
+                KillsInGame or 0,
+                Gem or "N/A",
+                XP or "N/A",
+                AllItem,
+                tostring(TotalGems or 0),
+                MaxGems
+            )
+
+            -- ส่ง Webhook
+            local req = http_request or request or HttpPost or syn and syn.request
+            if req then
+                local BodyJson = {
+                    content = "",
+                    embeds = {
+                        {
+                            title = "**Game Finished**",
+                            description = finalDesc,
+                            type = "rich",
+                            color = 0x33FFCC,
+                            timestamp = DateTime.now():ToIsoDate()
+                        }
+                    }
+                }
+
+                req({
+                    Url = _G.Webhook,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = game.HttpService:JSONEncode(BodyJson)
+                })
+            else
+                warn("ไม่พบฟังก์ชัน request => ไม่สามารถส่ง Webhook ได้")
+            end
+        end
+    end
+
+    -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
+    RunService.Stepped:Connect(function()
+        if GameFinished.Value == true then
+            task.delay(3, function()
+                SendGameFinishedWebhook()
+            end)
+        elseif GameFinished.Value == false and WebhookSent then
+            -- รีเซ็ต WebhookSent เมื่อค่า GameFinished กลับมาเป็น false
+            WebhookSent = false
+        end
+    end)
+else
+    print("ยังอยู่ในล๊อบบี้หรือไม่มี GameFinished")
+end 
+
+
 --------------------------------------------------------------------------------
 -- (J) สร้าง UI (Lib): "Add Gems" => MaxGems = currentGems + AddGemsWanted
 --------------------------------------------------------------------------------
@@ -450,7 +595,7 @@ end)
 SettingsBox:AddLabel("Optional UI Toggles")
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
     Text    = 'Toggle White Screen',
-    Default = true,
+    Default = false,
 })
 WhiteScreenToggle:OnChanged(function(v)
     RunService:Set3dRenderingEnabled(not v)
