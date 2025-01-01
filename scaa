@@ -407,7 +407,9 @@ if GameFinished then
 
             --task.wait(2)
             -- ตัวอย่าง: เก็บข้อมูลและส่ง Webhook
+            
             local Player = game:GetService("Players").LocalPlayer
+            local UnitInfo = Player.PlayerGui:WaitForChild("UnitInfo", 10)
             local Level, Gem, GemPath, GoldPath, XP, TitlePath, DescPath, DiffPath
             local WaveCompleted, TimeCompleted, TotalGems, InfoGameEnd, KillsInGame = nil
             local AllItem = ""
@@ -427,16 +429,62 @@ if GameFinished then
                 TotalGems = GemPath.Value
                 InfoGameEnd = Player.PlayerGui.ResultsUI.Holder.Title.Text
                 KillsInGame = Player["_stats"].kills.Value
-
+                
+                --game:GetService("Players").LocalPlayer.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText.text
                 -- ดึงข้อมูลไอเทมที่ได้รับ
-                local HatchInfo = Player.PlayerGui.HatchInfo
-                if HatchInfo and HatchInfo:FindFirstChild("holder") and HatchInfo.holder:FindFirstChild("info1") then
-                    HatchInfo.holder.info1.UnitName:GetPropertyChangedSignal("Text"):Connect(function()
-                        local ItemName = HatchInfo.holder.info1.UnitName.Text
+                --[[local UnitInfo = Player.PlayerGui.UnitInfo
+                if UnitInfo and UnitInfo:FindFirstChild("holder") and UnitInfo.holder:FindFirstChild("info1") then
+                    UnitInfo.holder.info1.UnitName.UnitNameText:GetPropertyChangedSignal("Text"):Connect(function()
+                        local ItemName = UnitInfo.holder.info1.UnitName.UnitNameText.text
                         AllItem = AllItem .. "◈ " .. ItemName .. "\n"
                     end)
+                end]]
+
+                local Player = game:GetService("Players").LocalPlayer
+                local UnitInfo = Player.PlayerGui:WaitForChild("UnitInfo", 10)
+
+                -- ตรวจสอบโครงสร้าง UnitInfo
+                if UnitInfo and UnitInfo:FindFirstChild("holder") then
+                    local holder = UnitInfo.holder
+                    if holder:FindFirstChild("info1") then
+                        local info1 = holder.info1
+                        if info1:FindFirstChild("UnitName") then
+                            local UnitName = info1.UnitName
+                            if UnitName:FindFirstChild("UnitNameText") then
+                                local UnitNameText = UnitName.UnitNameText
+
+                                -- เช็คว่าเป็น TextLabel และมีค่า Text
+                                if UnitNameText:IsA("TextLabel") then
+                                    -- ดึงค่าเริ่มต้น
+                                    local initialItemName = UnitNameText.Text
+                                    AllItem = AllItem .. "◈ " .. initialItemName .. "\n"
+                                    print("Initial Item Name:", initialItemName)
+
+                                    -- ตั้ง Listener หากข้อความเปลี่ยน
+                                    UnitNameText:GetPropertyChangedSignal("Text"):Connect(function()
+                                        local updatedItemName = UnitNameText.Text
+                                        AllItem = AllItem .. "◈ " .. updatedItemName .. "\n"
+                                        print("Item Name Updated:", updatedItemName)
+                                    end)
+                                else
+                                    warn("UnitNameText is not a TextLabel!")
+                                end
+                            else
+                                warn("UnitNameText not found!")
+                            end
+                        else
+                            warn("UnitName not found!")
+                        end
+                    else
+                        warn("info1 not found!")
+                    end
+                else
+                    warn("UnitInfo or holder not found!")
                 end
             end)
+
+
+
 
             local function GetCurrentLevel()
                 return (string.gsub(Level or "Level ???", "Level ", ""))
@@ -612,7 +660,7 @@ end)
 -- (K) ปุ่มไอคอน Toggle UI
 --------------------------------------------------------------------------------
 
-do
+--[[do
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "UI_ToggleButton"
     ScreenGui.ResetOnSpawn = false
@@ -633,6 +681,31 @@ do
     ToggleButton.MouseButton1Click:Connect(function()
         Library.Toggle()
     end)
+end]]
+do
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "UI_ToggleButton"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    ScreenGui.DisplayOrder = 9999
+
+    -- ใส่ Parent = PlayerGui
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+    local ToggleButton = Instance.new("ImageButton")
+    ToggleButton.Name = "ToggleButton"
+    ToggleButton.Size = UDim2.new(0, 25, 0, 25)
+    ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+    ToggleButton.BackgroundTransparency = 0 -- ตั้งค่าความโปร่งใสให้มองเห็นสีพื้นหลัง
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 182, 255) -- สีชมพูอ่อน (Light Pink)
+    ToggleButton.ImageTransparency = 1 -- ซ่อนรูปภาพ เพื่อให้เห็นแต่สีพื้นหลัง
+    ToggleButton.Parent = ScreenGui
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        Library.Toggle()
+    end)
 end
+
+
 
 print("Script loaded! ถ้าไม่มี spawn_units => ใช้ Level เดิมจากไฟล์ SavedLevel แทน จนกว่าจะหาเจอใหม่.") 
