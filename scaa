@@ -33,8 +33,8 @@ if success then ThumbnailURL = result else warn("Failed to get avatar:", result)
 -- (B) Webhook Configuration
 --------------------------------------------------------------------------------
 
-_G.Webhook = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB" -- Main webhook
-_G.Webhook2 = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB" -- Secondary webhook
+_G.Webhook = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb" -- Main webhook
+_G.Webhook2 = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb" -- Secondary webhook
 local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV" -- End webhook
 local LogoURLs = "https://cdn.discordapp.com/attachments/1082245350166892554/1323232911272448010/logo.png?ex=6773c42e&is=677272ae&hm=73bbda78feab2829609946c3dced71b8e6f9f544c3888a019a1ae5f304332588&"
 
