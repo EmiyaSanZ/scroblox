@@ -433,6 +433,32 @@ if GameFinished then
             local WaveCompleted, TimeCompleted, TotalGems, InfoGameEnd, KillsInGame = nil
             local AllItem = ""
 
+            local WaveCompleted = "0" -- ค่าเริ่มต้น
+
+            -- ฟังก์ชันเพื่อดึงค่า WaveCompleted
+            local function GetWaveCompleted()
+                local wave = "0"
+                pcall(function()
+                    -- ลองดึงค่าจาก GUI
+                    local waveObj = Player.PlayerGui.ResultsUI.Holder.Middle:FindFirstChild("WavesCompleted")
+                    if waveObj and waveObj:IsA("TextLabel") then
+                        wave = waveObj.Text
+                    else
+                        -- หาก GUI ไม่มีค่า ให้ลองดึงจาก Workspace
+                        local dataFolder = game:GetService("Workspace"):FindFirstChild("_DATA")
+                        if dataFolder and dataFolder:FindFirstChild("Wave") then
+                            wave = tostring(dataFolder.Wave.Value)
+                        end
+                    end
+                end)
+                return wave
+            end
+
+            -- เรียกใช้ฟังก์ชันเพื่ออัปเดตค่า WaveCompleted
+            WaveCompleted = GetWaveCompleted()
+            print("Wave Completed:", WaveCompleted)
+
+
             -- ใช้ pcall เพื่อดึงข้อมูลและหลีกเลี่ยงข้อผิดพลาด
             pcall(function()
                 Level = Player.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
