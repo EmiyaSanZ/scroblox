@@ -406,7 +406,7 @@ end
 local GameFinished = WaitForGameFinished()
 
 -- ตัวแปรเพื่อป้องกันการส่ง Webhook ซ้ำ
-local WebhookSent = true
+local WebhookSent = false
 
 if GameFinished then
     -- ฟังก์ชันที่ใช้ส่ง Webhook
@@ -418,23 +418,48 @@ if GameFinished then
 
             -- กดปุ่ม Next เพื่อแสดงข้อมูล
             local Player = game:GetService("Players").LocalPlayer
+            -- เพิ่มการตรวจสอบ ResultsUI
+            if not Player.PlayerGui:FindFirstChild("ResultsUI") then
+                WebhookSent = false
+                return
+            end
+
             local button = Player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
 
+                        -- แก้ไขส่วนการรอ Unit Info
             if button then
+                local function checkUnitInfo()
+                    local UnitInfo = Player.PlayerGui:FindFirstChild("UnitInfo")
+                    if not UnitInfo then return false end
+                    
+                    local holder = UnitInfo:FindFirstChild("holder")
+                    if not holder then return false end
+                    
+                    local info1 = holder:FindFirstChild("info1")
+                    if not info1 then return false end
+                    
+                    local UnitName = info1:FindFirstChild("UnitName")
+                    if not UnitName then return false end
+                    
+                    -- เพิ่มการตรวจสอบ TextLabel หรือ Text
+                    local nameText = UnitName:FindFirstChild("TextLabel") or UnitName:FindFirstChild("Text")
+                    if not nameText then return false end
+                    
+                    return nameText.Text and string.find(nameText.Text, "x") ~= nil
+                end
+                
+                local startTime = tick()
                 repeat
                     spawn(function()
                         for _, connection in pairs(getconnections(button.Activated)) do
-                            connection:Fire() -- กดปุ่ม Next
+                            connection:Fire()
                         end
                     end)
-                    wait(0.5) -- รอการอัปเดต UI
-                until Player.PlayerGui.UnitInfo and Player.PlayerGui.UnitInfo.holder and 
-                      Player.PlayerGui.UnitInfo.holder.info1 and 
-                      Player.PlayerGui.UnitInfo.holder.info1.UnitName and 
-                      Player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText and
-                      string.find(Player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText.Text, "x")
+                    wait(0.5)
+                until checkUnitInfo() or (tick() - startTime > 10)
             else
                 print("ไม่พบปุ่ม Next ใน GUI!")
+                WebhookSent = false
             end
 
             -- ดึงข้อมูลสำหรับ Webhook
@@ -459,10 +484,25 @@ if GameFinished then
                 KillsInGame = Player["_stats"].kills.Value
 
                 -- ดึงข้อมูลไอเทมที่ได้รับ
-                local UnitInfo = Player.PlayerGui:WaitForChild("UnitInfo", 10)
-                if UnitInfo and UnitInfo:FindFirstChild("holder") and UnitInfo.holder:FindFirstChild("info1") then
-                    local UnitNameText = UnitInfo.holder.info1.UnitName.UnitNameText
-                    AllItem = AllItem .. "◈ " .. UnitNameText.Text .. "\n"
+                
+            end)
+            -- แก้ไขส่วนดึงข้อมูล item
+            pcall(function()
+                local UnitInfo = Player.PlayerGui:FindFirstChild("UnitInfo")
+                if UnitInfo then
+                    local holder = UnitInfo:FindFirstChild("holder")
+                    if holder then
+                        local info1 = holder:FindFirstChild("info1")
+                        if info1 then
+                            local UnitName = info1:FindFirstChild("UnitName")
+                            if UnitName then
+                                local nameText = UnitName:FindFirstChild("TextLabel") or UnitName:FindFirstChild("Text")
+                                if nameText and nameText.Text then
+                                    AllItem = AllItem .. "◈ " .. nameText.Text .. "\n"
+                                end
+                            end
+                        end
+                    end
                 end
             end)
 
@@ -534,7 +574,7 @@ if GameFinished then
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
-            WebhookSent = true
+            WebhookSent = false
         end
     end)
 else
