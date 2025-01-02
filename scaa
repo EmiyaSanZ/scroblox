@@ -534,7 +534,7 @@ if GameFinished then
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
-            WebhookSent = false
+            WebhookSent = true
         end
     end)
 else
