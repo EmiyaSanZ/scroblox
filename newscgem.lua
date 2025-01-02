@@ -434,7 +434,7 @@ if GameFinished then
             "```md\n#Package Info\n" ..
             "- ฟามเพชรจำนวน : %d 💎\n" ..
             "- ดำเนินการแล้ว : [%d|%d]" ..
-            "```\n\n- จ้างโดยคุณ <@%s>",
+            "```\n",
             player.Name,
             GemGET,
             stats.Gold,
@@ -453,14 +453,14 @@ if GameFinished then
             AllItem,
             LocalData.AddGemsWanted,
             LocalData.AddGemsWanted - LocalData.sumGems,
-            LocalData.AddGemsWanted,
-            DiscordID
+            LocalData.AddGemsWanted            
         )
 
         if LocalData.sumGems > 0 then
             descFormat = descFormat .. string.format(
-                "```md\n- เหลือที่ต้องฟามอีก : %d 💎```",
-                LocalData.sumGems
+                "```md\n- เหลือที่ต้องฟามอีก : %d 💎```\n\n- จ้างโดยคุณ <@%s>",
+                LocalData.sumGems,
+                DiscordID
             )
         end
 
