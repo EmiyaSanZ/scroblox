@@ -1,139 +1,153 @@
---// PLaNS SHOP - Gem Farming Script
+--// final_script_immediate_webhook_ui_plus_addgems.lua
 repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("spawn_units")
 repeat wait() until game.Players.LocalPlayer:FindFirstChild("_stats")
-
 --------------------------------------------------------------------------------
--- (A) Initialize Services & Variables
+-- (A) ตั้งค่าพื้นฐาน
 --------------------------------------------------------------------------------
 
-if not game:IsLoaded() then game.Loaded:Wait() end
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
 
-local Players = game:GetService("Players")
+function GetNumberFromString(S)
+    return string.match(S,"%d+")
+end 
+
+function GetTimeFromString(S)
+    return string.match(S, "%d+:%d+")
+end
+
+
+local Players    = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local HttpService = game:GetService("HttpService")
-local player = Players.LocalPlayer
-
--- Utility Functions
-local function GetNumberFromString(S) return string.match(S,"%d+") end 
-local function GetTimeFromString(S) return string.match(S, "%d+:%d+") end
-
--- Get Player Avatar
+local HttpService= game:GetService("HttpService")
+local player     = Players.LocalPlayer
 local ThumbnailURL = nil
-local success, result = pcall(function()
-    local ThumbnailRequest = http.request({
-        Url = "https://thumbnails.roblox.com/v1/users/avatar?userIds="..tostring(player.UserId).."&size=420x420&format=Png&isCircular=false",
+
+local ThumbnailRequest = http.request(
+    {
+        Url = "https://thumbnails.roblox.com/v1/users/avatar?userIds="..tostring(game.Players.LocalPlayer.UserId).."&size=420x420&format=Png&isCircular=false",
         Method = "GET",
-        Headers = {["Content-Type"] = "application/json"},
-    })
-    return (HttpService:JSONDecode(ThumbnailRequest.Body))["data"][1]["imageUrl"]
-end)
-if success then ThumbnailURL = result else warn("Failed to get avatar:", result) end
+        Headers = {
+            ["Content-Type"] = "application/json"
+        },
+    }
+)
+ThumbnailURL = (game:GetService("HttpService"):JSONDecode(ThumbnailRequest.Body))["data"][1]["imageUrl"]
+print(ThumbnailURL)
+
 
 --------------------------------------------------------------------------------
--- (B) Webhook Configuration
+-- (B) ประกาศ Webhook หลัก + WebhookEnd
 --------------------------------------------------------------------------------
 
-_G.Webhook = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb" -- Main webhook
-_G.Webhook2 = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb" -- Secondary webhook
-local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV" -- End webhook
-local LogoURLs = "https://cdn.discordapp.com/attachments/1082245350166892554/1323232911272448010/logo.png?ex=6773c42e&is=677272ae&hm=73bbda78feab2829609946c3dced71b8e6f9f544c3888a019a1ae5f304332588&"
+_G.Webhook    = "https://discord.com/api/webhooks/1283623950017892382/2y8Qax0xHlH-UYlDulC9-2GCsG_qjIqswU6rt-q9fGR3ix9o7SfDGXR-9lL6PqB64jbb"
+_G.Webhook2    = "https://discord.com/api/webhooks/1006516710586728572/uoA_y1vTJU5Hef6Svj7uth0f1wt4m3-gyzDrSaRREvIFxgTv1C2w6HslSEfumtlTXZKB"
+local WebhookEnd = "https://discord.com/api/webhooks/1099711689450066060/_0cDSkNN4gfosy0oL-5i9Rg8BXF0hQ2Bu4d3H-AlCuZf1T8_3hL-qxi3X1mt1DrDtLcV"
 
 --------------------------------------------------------------------------------
--- (C) Local Storage System
+-- (C) ตัวแปรเก็บชื่อไฟล์ JSON = "<PlayerName>_SHOPData.json"
 --------------------------------------------------------------------------------
 
 local SettingsFile = player.Name .. "_SHOPData.json"
 
+-- ค่า Default ถ้าไม่มีไฟล์
 local DefaultData = {
-    MaxGems = 0,
-    DiscordID = "",
-    OldGems = 0,
-    IsSended = false,
+    MaxGems       = 0,
+    DiscordID     = "",
+    OldGems       = 0,
+    IsSended      = false,
     AddGemsWanted = 0,
-    sumGems = 0,
-    SavedLevel = "???",
-    SavedBP = "???",
-    SavedBP2 = "???"
+
+    SavedLevel    = "???",  -- <--- เพิ่มฟิลด์เก็บเลเวลล่าสุด (default ???)
+    SavedBP       = "???",   -- <<-- เพิ่มฟิลด์เก็บค่า BP ใหม่
+    SavedBP2       = "???"
 }
 
--- Storage Functions
-local function loadSettings()
-    if not isfile or not isfile(SettingsFile) then
-        if writefile then
-            writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
-        end
-        return DefaultData
-    end
+--------------------------------------------------------------------------------
+-- (D) ฟังก์ชัน load/save ไฟล์ JSON
+--------------------------------------------------------------------------------
 
-    local success, data = pcall(function()
-        return HttpService:JSONDecode(readfile(SettingsFile))
-    end)
-    
-    if not success or type(data) ~= "table" then
-        warn("Invalid JSON file - creating new one")
-        if writefile then
-            writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
+local function loadSettings()
+    if isfile and isfile(SettingsFile) then
+        local content = readfile(SettingsFile)
+        local success, data = pcall(function()
+            return HttpService:JSONDecode(content)
+        end)
+        if success and type(data)=="table" then
+            return data
+        else
+            warn("ไฟล์ JSON เสียรูปแบบ => สร้างใหม่: " .. SettingsFile)
         end
-        return DefaultData
     end
-    
-    return data
+    -- ถ้าไม่มีไฟล์หรือ decode ไม่ผ่าน => สร้างใหม่
+    if writefile then
+        writefile(SettingsFile, HttpService:JSONEncode(DefaultData))
+    else
+        warn("Executor ไม่รองรับ writefile => loadSettings ล้มเหลว")
+    end
+    return DefaultData
 end
 
 local function saveSettings(tbl)
     if writefile then
-        local success, result = pcall(function()
-            writefile(SettingsFile, HttpService:JSONEncode(tbl))
-        end)
-        if not success then
-            warn("Failed to save settings:", result)
-        end
+        local s = HttpService:JSONEncode(tbl)
+        writefile(SettingsFile, s)
+    else
+        warn("Executor ไม่รองรับ writefile => saveSettings ล้มเหลว")
     end
 end
 
 --------------------------------------------------------------------------------
--- (D) Load Player Data
+-- (E) โหลดข้อมูลจากไฟล์ + เก็บค่า
 --------------------------------------------------------------------------------
 
 local LocalData = loadSettings()
-local function SafeGet(key, default) return LocalData[key] ~= nil and LocalData[key] or default end
 
--- Initialize variables with safe defaults
-local MaxGems = SafeGet("MaxGems", 0)
-local DiscordID = SafeGet("DiscordID", "")
-local OldGems = SafeGet("OldGems", 0)
-local IsSended = SafeGet("IsSended", false)
-local AddGemsWanted = SafeGet("AddGemsWanted", 0)
-local SavedLevel = SafeGet("SavedLevel", "???")
-local SavedBP = SafeGet("SavedBP", "???")
-local SavedBP2 = SafeGet("SavedBP2", "???")
+local MaxGems       = LocalData.MaxGems or 0
+local DiscordID     = LocalData.DiscordID or ""
+local OldGems       = LocalData.OldGems or 0
+local IsSended      = LocalData.IsSended or false
+local AddGemsWanted = LocalData.AddGemsWanted or 0
+local SavedLevel    = LocalData.SavedLevel or "???"
+local SavedBP       = LocalData.SavedBP or "???"
+local SavedBP2       = LocalData.SavedBP2 or "???"
 
 --------------------------------------------------------------------------------
--- (E) Game Stats Tracking
+-- (F) ลองหา _stats.gem_amount (กันสคริปต์ไม่บล็อก)
 --------------------------------------------------------------------------------
 
--- Get current gems
+local gemObj
 local currentGems = 0
 pcall(function()
     local stats = player:WaitForChild("_stats", 5)
-    local gemObj = stats and stats:WaitForChild("gem_amount", 2)
-    if gemObj and typeof(gemObj.Value) == "number" then
-        currentGems = gemObj.Value
-    end
+    gemObj = stats and stats:WaitForChild("gem_amount", 2)
 end)
+if gemObj and typeof(gemObj.Value)=="number" then
+    currentGems = gemObj.Value
+else
+    warn("ไม่พบ gem_amount => currentGems=0")
+end
 
--- Get current gold
+
+
+-- ลองโหลด gold_amount แบบ pcall กัน error
+local stats = player:WaitForChild("_stats", 5)
+local goldObj
 local currentGold = 0
 pcall(function()
-    local stats = player:WaitForChild("_stats", 5)
-    local goldObj = stats and stats:WaitForChild("gold_amount", 2)
-    if goldObj and typeof(goldObj.Value) == "number" then
-        currentGold = goldObj.Value
-    end
+    goldObj = stats and stats:WaitForChild("gold_amount", 2)
 end)
+if goldObj and typeof(goldObj.Value)=="number" then
+    currentGold = goldObj.Value
+else
+    warn("ไม่พบ gold_amount => currentGold=0, อาจต้องเช็กชื่อ field ใน _stats อีกที")
+end
+
+print("Current gold:", currentGold)
 
 --------------------------------------------------------------------------------
--- (F) Level & Battle Pass Tracking
+-- (G) หาค่า Level (spawn_units) + อัปเดตลง JSON ถ้าหาเจอ
 --------------------------------------------------------------------------------
 
 local function TryGetLevelOrSaved()
@@ -143,83 +157,87 @@ local function TryGetLevelOrSaved()
         local lvlObj = spawnUnits.Lives.Main.Desc:WaitForChild("Level", 2)
         foundLevel = lvlObj.Text
     end)
-    
-    if not foundLevel then return SavedLevel end
-    
+    -- ถ้า foundLevel == nil => แปลว่าหาไม่ได้ => ใช้ SavedLevel เดิม
+    if not foundLevel then
+        return SavedLevel  -- ใช้ค่าเก่าที่มี
+    end
+    -- ถ้ามี foundLevel => ตัด "Level " ออก
     local newLV = string.gsub(foundLevel, "Level ", "")
+    -- อัปเดต LocalData + เซฟลงไฟล์
     LocalData.SavedLevel = newLV
     saveSettings(LocalData)
     return newLV
 end
 
+local currentLevel = TryGetLevelOrSaved()
+
+--------------------------------------------------------------------------------
+-- (G2) ฟังก์ชันหาค่า Battle Pass Level (BP) + เก็บเป็น SavedBP
+--------------------------------------------------------------------------------
+
 local function TryGetBPOrSaved()
     local foundBP = nil
     pcall(function()
-        local bpGui = player:WaitForChild("PlayerGui", 5):WaitForChild("BattlePass", 2)
+        -- ตัวอย่างโครงสร้าง GUI สมมุติว่าอยู่ใน PlayerGui.BattlePass.Main.Level.V
+        local bpGui   = player:WaitForChild("PlayerGui", 5):WaitForChild("BattlePass", 2)
         local mainFrm = bpGui:WaitForChild("Main", 2)
-        local lvFrm = mainFrm:WaitForChild("Level", 2)
-        foundBP = lvFrm:WaitForChild("V", 2).Text
+        local lvFrm   = mainFrm:WaitForChild("Level", 2)
+        local vLbl    = lvFrm:WaitForChild("V", 2)  -- สมมุติ Label ชื่อ V
+        foundBP = vLbl.Text  -- เช่น "50"
     end)
-    
-    if not foundBP or foundBP == "99" then return SavedBP end
-    
+
+    if not foundBP then
+        return SavedBP  -- ถ้าหาไม่เจอ => ใช้ค่าที่เซฟไว้ก่อนหน้า
+    end
+    if foundBP == "99" then
+        return SavedBP
+    end
     LocalData.SavedBP = foundBP
     saveSettings(LocalData)
     return foundBP
 end
 
+local currentBP = TryGetBPOrSaved()
+--------------------------------------------------------------------------------
+-- (G3) ฟังก์ชันหาค่า Battle Pass Level (BP) + เก็บเป็น SavedBP2
+--------------------------------------------------------------------------------
+
 local function TryGetBPOrSaved2()
     local foundBP2 = nil
     pcall(function()
-        local bpGui = player:WaitForChild("PlayerGui", 5):WaitForChild("BattlePass", 2)
-        local mainFrm = bpGui:WaitForChild("Main", 2)
-        local lvFrm = mainFrm:WaitForChild("FurthestRoom", 2)
-        foundBP2 = lvFrm:WaitForChild("V", 2).Text
+        -- ตัวอย่างโครงสร้าง GUI สมมุติว่าอยู่ใน Player.PlayerGui.BattlePass.Main.FurthestRoom.V.Text,
+        local bpGui2   = player:WaitForChild("PlayerGui", 5):WaitForChild("BattlePass", 2)
+        local mainFrm2 = bpGui2:WaitForChild("Main", 2)
+        local lvFrm2   = mainFrm2:WaitForChild("FurthestRoom", 2)
+        local vLbl2    = lvFrm2:WaitForChild("V", 2)  -- สมมุติ Label ชื่อ V
+        foundBP2 = vLbl2.Text  -- เช่น "50"
     end)
-    
-    if not foundBP2 or foundBP2 == "100000" or foundBP2 == "100000/100000" then 
-        return SavedBP2 
+
+    if not foundBP2 then
+        return SavedBP2  -- ถ้าหาไม่เจอ => ใช้ค่าที่เซฟไว้ก่อนหน้า
     end
-    
+    if foundBP2 == "100000" or foundBP2 == "100000/100000" then
+        return SavedBP2
+    end
     LocalData.SavedBP2 = foundBP2
     saveSettings(LocalData)
     return foundBP2
 end
 
--- Update current values
-local currentLevel = TryGetLevelOrSaved()
-local currentBP = TryGetBPOrSaved()
 local currentBP2 = TryGetBPOrSaved2()
 
 --------------------------------------------------------------------------------
--- (G) Webhook System
+-- (H) ฟังก์ชันส่ง Webhook และ WebhookEnd
 --------------------------------------------------------------------------------
+local LogoURLs = "https://cdn.discordapp.com/attachments/1082245350166892554/1323232911272448010/logo.png?ex=6773c42e&is=677272ae&hm=73bbda78feab2829609946c3dced71b8e6f9f544c3888a019a1ae5f304332588&"
 
-local function SendWebhookRequest(url, payload)
-    local req = http_request or request or HttpPost or syn and syn.request
-    if not req then
-        warn("HTTP request function not found")
-        return false
-    end
-    
-    local success, result = pcall(function()
-        return req({
-            Url = url,
-            Method = "POST",
-            Headers = {["Content-Type"] = "application/json"},
-            Body = HttpService:JSONEncode(payload)
-        })
-    end)
-    
-    if not success then
-        warn("Failed to send webhook:", result)
-        return false
-    end
-    
-    return true
-end
 
 local function sendWebhook(title, desc)
+    local req = http_request or request or HttpPost or syn and syn.request
+    if not req then
+        warn("ไม่มีฟังก์ชัน request => sendWebhook ล้มเหลว")
+        return
+    end
     local payload = {
         content = "",
         embeds = {{
@@ -227,348 +245,363 @@ local function sendWebhook(title, desc)
             description = desc,
             color = 0x00FF99,
             image = { url = ThumbnailURL },
-            footer = { icon_url = LogoURLs, text = "PLaNS SHOP"},
+            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
-    return SendWebhookRequest(_G.Webhook, payload)
+    req({
+        Url = _G.Webhook,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(payload)
+    })
 end
-
+--------------------------------------------------------------------------------
 local function sendWebhook2(title, desc)
+    local req = http_request or request or HttpPost or syn and syn.request
+    if not req then
+        warn("ไม่มีฟังก์ชัน request => sendWebhook ล้มเหลว")
+        return
+    end
     local payload = {
-        content = string.format("<@%s> <@&1006505817769521177>", DiscordID),
+        content = "<@"..DiscordID.."> <@&1006505817769521177>",
         embeds = {{
             title = title,
             description = desc,
             color = 0xFF1493,
             image = { url = ThumbnailURL },
-            footer = { icon_url = LogoURLs, text = "PLaNS SHOP"},
+            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
-    return SendWebhookRequest(_G.Webhook, payload)
+    req({
+        Url = _G.Webhook,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(payload)
+    })
 end
-
+--------------------------------------------------------------------------------
 local function sendWebhookEnd(title, desc)
+    local req = http_request or request or HttpPost or syn and syn.request
+    if not req then
+        warn("ไม่มีฟังก์ชัน request => sendWebhookEnd ล้มเหลว")
+        return
+    end
     local payload = {
-        content = string.format("<@%s> <@&1006505817769521177>", DiscordID),
+        content = "<@"..DiscordID.."> <@&1006505817769521177>", 
         embeds = {{
             title = title,
             description = desc,
             color = 0xFF1493,
             image = { url = ThumbnailURL },
-            footer = { icon_url = LogoURLs, text = "PLaNS SHOP"},
+            footer = { icon_url = LogoURLs , text = "PLaNS SHOP"},
             timestamp = DateTime.now():ToIsoDate()
         }}
     }
-    return SendWebhookRequest(WebhookEnd, payload)
+    req({
+        Url = WebhookEnd,
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(payload)
+    })
 end
 
 --------------------------------------------------------------------------------
--- (H) Game Finished Handler
+-- (I) ส่ง Webhook ทันที + เช็คปรับ MaxGems
 --------------------------------------------------------------------------------
 
+--[[sendWebhook(
+    "PLaNS x เช็คเพชร",
+    string.format(
+        "🔒・Username : ||**%s**||\n" ..
+        "```md\n#Profile\n" ..
+        "🟡・ทอง : %d\n" ..
+        "🧪・เลเวล : %s\n" ..
+        "🔋・แบทเทินพาส : %s [%s]\n"..
+        "💎・เพชรตอนนี้ : %d\n" ..
+        "- เพชรที่ต้องฟาม : [%d|%d]\n" ..
+        "```\n" ..
+        "```- ฟามเพชรจำนวน : %d เพชร 💎 ```\n" ..
+        "- จ้างโดยคุณ: <@%s>",
+        player.Name,
+        currentGold,
+        currentLevel,
+        currentBP,
+        currentBP2,
+        currentGems,
+        currentGems,
+        MaxGems,
+        AddGemsWanted,
+        DiscordID
+    )
+)]]
+
+-- ถ้าผู้เล่นใช้เพชร => หักจาก MaxGems
+if currentGems < OldGems then
+    local diff = OldGems - currentGems
+    LocalData.MaxGems = math.max(LocalData.MaxGems - diff, 0)
+    print("ใช้เพชร", diff, "=> MaxGems =", LocalData.MaxGems)
+elseif currentGems > OldGems then
+    print("ได้เพชรเพิ่ม", currentGems - OldGems, "=> OldGems:", OldGems, "->", currentGems)
+end
+LocalData.OldGems = currentGems
+
+-- ถ้าถึงเป้า => ส่ง WebhookEnd
+if currentGems >= LocalData.MaxGems
+   and LocalData.MaxGems > 0
+   and (not LocalData.IsSended)
+then
+    sendWebhookEnd(
+        "- ฟามเสร็จแล้วเปลี่ยนรหัสผ่านด้วยนะ <a:9828pinkpixelheart:1021714314446508082>",
+        string.format(
+            "🔒・Username : ||**%s**||\n" ..
+            "```md\n#Profile\n" ..
+            "💎・เพชรตอนนี้ : %d\n" ..
+            "🟡・ทอง : %d\n" ..
+            "🧪・เลเวล : %s\n" ..
+            "🔋・แบทเทินพาส : %s [%s]\n"..
+            "- เพชรที่ได้ครบแล้ว : [%d|%d]\n" ..
+            "```\n" ..
+            "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎 ```\n\n" ..
+            "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n[ฝาก +1 โปร์ไฟล์เฟสด้วยงับ](https://www.facebook.com/photo/?fbid=817544902138722&set=a.117678525458700)\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
+            player.Name,
+            currentGems,
+            currentGold,
+            currentLevel,
+            currentBP,
+            currentBP2,
+            currentGems,
+            MaxGems,
+            AddGemsWanted
+        )
+    )
+    LocalData.IsSended = true
+end
+
+saveSettings(LocalData)
+
+-- เรียกใช้งาน RunService
+local RunService = game:GetService("RunService")
+
+-- ฟังก์ชันรอ GameFinished
 local function WaitForGameFinished()
     local GameFinished
     pcall(function()
+        -- รอจนกว่า "_DATA" จะมีอยู่ใน Workspace
         local DataFolder = game:GetService("Workspace"):WaitForChild("_DATA", 10)
         if DataFolder then
             GameFinished = DataFolder:WaitForChild("GameFinished", 10)
         end
     end)
+    if not GameFinished then
+        warn("ไม่พบ GameFinished ใน Workspace")
+    end
     return GameFinished
 end
 
+------------------------------------------
+
+-- เรียกใช้งาน WaitForGameFinished เพื่อหาตัวแปร GameFinished
 local GameFinished = WaitForGameFinished()
+
+-- ตัวแปรเพื่อป้องกันการส่ง Webhook ซ้ำ
 local WebhookSent = false
 
 if GameFinished then
+    -- ฟังก์ชันที่ใช้ส่ง Webhook
     local function SendGameFinishedWebhook()
-        -- Check conditions
-        if not (GameFinished.Value == true and not WebhookSent) then return end
-        WebhookSent = true
-        
-        -- Wait for UI
-        local function waitForUI()
-            local success, result = pcall(function()
-                local ResultsUI = player.PlayerGui:WaitForChild("ResultsUI", 10)
-                if not ResultsUI then return false end
-                
-                local GemReward = ResultsUI.Holder.LevelRewards.ScrollingFrame:WaitForChild("GemReward", 5)
-                if not GemReward then return false end
-                
-                local Amount = GemReward.Main:WaitForChild("Amount", 2)
-                if not Amount then return false end
-                
-                return true
-            end)
-            return success and result
-        end
+        -- เช็ค GameFinished.Value
+        if GameFinished.Value == true and not WebhookSent then
+            -- ตั้งค่าว่า Webhook ถูกส่งแล้ว
+            WebhookSent = true
 
-        if not waitForUI() then
-            warn("Failed to load UI")
-            WebhookSent = false
-            return
-        end
+            -- กดปุ่ม Next เพื่อแสดงข้อมูล
+            local Player = game:GetService("Players").LocalPlayer
+            local button = Player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
 
-        -- Click Next button
-        local function clickNextButton()
-            local button = player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
-            if not button then return end
+            if button then
+                repeat
+                    spawn(function()
+                        for _, connection in pairs(getconnections(button.Activated)) do
+                            connection:Fire() -- กดปุ่ม Next
+                        end
+                    end)
+                    wait(0.5) -- รอการอัปเดต UI
+                until Player.PlayerGui.UnitInfo and Player.PlayerGui.UnitInfo.holder and 
+                      Player.PlayerGui.UnitInfo.holder.info1 and 
+                      Player.PlayerGui.UnitInfo.holder.info1.UnitName and 
+                      Player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText and
+                      string.find(Player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText.Text, "x")
+            else
+                warn("ไม่พบปุ่ม Next ใน GUI!")
+            end
 
-            spawn(function()
-                for _, conn in pairs(getconnections(button.Activated)) do
-                    conn:Fire()
+            -- ดึงข้อมูลสำหรับ Webhook
+            local Level, Gem, GemPath, GoldPath, XP, TitlePath, DescPath, DiffPath
+            local WaveCompleted, TimeCompleted, TotalGems, InfoGameEnd, KillsInGame = nil
+            local AllItem = ""
+
+            -- ใช้ pcall เพื่อดึงข้อมูลและหลีกเลี่ยงข้อผิดพลาด
+            pcall(function()
+                Level = Player.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text
+                Gem = Player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
+                GemPath = Player["_stats"]["gem_amount"]
+                GoldPath = Player["_stats"]["gold_amount"]
+                XP = Player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text
+                TitlePath = Player.PlayerGui.NewArea.holder.areaTitle
+                DescPath = Player.PlayerGui.NewArea.holder.areaDescription
+                DiffPath = Player.PlayerGui.NewArea.holder.Difficulty
+                WaveCompleted = Player.PlayerGui.ResultsUI.Holder.Middle.WavesCompleted.Text
+                TimeCompleted = Player.PlayerGui.ResultsUI.Holder.Middle.Timer.Text
+                TotalGems = GemPath.Value
+                InfoGameEnd = Player.PlayerGui.ResultsUI.Holder.Title.Text
+                KillsInGame = Player["_stats"].kills.Value
+
+                -- ดึงค่า WaveCompleted โดยเอาเฉพาะตัวเลข
+                local function GetWaveCompleted()
+                    local wave = "0" -- ค่าเริ่มต้น
+                    pcall(function()
+                        -- ลองดึงค่าจาก GUI
+                        local waveObj = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.Middle:FindFirstChild("WavesCompleted")
+                        if waveObj and waveObj:IsA("TextLabel") then
+                            wave = waveObj.Text:match("%d+") -- ใช้ pattern เพื่อดึงเฉพาะตัวเลข
+                        end
+                    end)
+                    return wave
+                end
+
+                -- เรียกใช้งานฟังก์ชัน
+                local WaveCompleted = GetWaveCompleted()
+                print("WaveCompleted = " .. WaveCompleted)
+
+
+                -- ดึงข้อมูลไอเทมที่ได้รับ
+                local UnitInfo = Player.PlayerGui:WaitForChild("UnitInfo", 10)
+                if UnitInfo and UnitInfo:FindFirstChild("holder") and UnitInfo.holder:FindFirstChild("info1") then
+                    local UnitNameText = UnitInfo.holder.info1.UnitName.UnitNameText
+                    AllItem = AllItem .. "◈ " .. UnitNameText.Text .. "\n"
                 end
             end)
-        end
 
-        -- Wait for unit info
-        local function waitForUnitInfo()
-            local start = tick()
-            repeat
-                clickNextButton()
-                wait(0.5)
-                if tick() - start > 10 then return false end
-            until player.PlayerGui:FindFirstChild("UnitInfo") 
-                  and player.PlayerGui.UnitInfo:FindFirstChild("holder")
-                  and player.PlayerGui.UnitInfo.holder:FindFirstChild("info1")
-                  and player.PlayerGui.UnitInfo.holder.info1:FindFirstChild("UnitName")
-                  and player.PlayerGui.UnitInfo.holder.info1.UnitName:FindFirstChild("UnitNameText")
-                  and string.find(player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText.Text, "x")
-            return true
-        end
-
-        if not waitForUnitInfo() then
-            warn("Failed to load unit info")
-            WebhookSent = false
-            return
-        end
-
-        -- Get gem reward
-        local GemGET = 0
-        pcall(function()
-            local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
-            GemGET = tonumber(GetNumberFromString(gemText)) or 0
-            if GemGET > 10000 then -- Sanity check
-                warn("Suspicious gem amount:", GemGET)
-                GemGET = 0
-            end
-        end)
-
-        -- Update sumGems
-        if LocalData.sumGems > 0 then
-            LocalData.sumGems = math.max(0, LocalData.sumGems - GemGET)
-            print(string.format("Got %d gems => %d remaining", GemGET, LocalData.sumGems))
-
-            -- Check if farming complete
-            if LocalData.sumGems <= 0 and not LocalData.IsSended then
-                task.spawn(function()
-                    local success = sendWebhookEnd(
-                        "✨ ฟามเสร็จแล้วเปลี่ยนรหัสผ่านเลย! ✨",
-                        string.format(
-                            "🔒・Username : ||**%s**||\n" ..
-                            "```md\n#Profile\n" ..
-                            "💎・This round gems : %d\n" ..
-                            "🟡・Gold : %d\n" ..
-                            "🧪・Level : %s\n" ..
-                            "🔋・Battle Pass : %s [%s]\n" ..
-                            "- ฟามเสร็จแล้ว! [%d/%d]\n" ..
-                            "```\n" ..
-                            "```md\n#Package Info\n- ฟามเพชร : %d 💎```\n\n" ..
-                            "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n[ฝาก +1 โปร์ไฟล์เฟสด้วยงับ](https://www.facebook.com/photo/?fbid=817544902138722&set=a.117678525458700)\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
-                            player.Name,
-                            GemGET,
-                            currentGold,
-                            currentLevel,
-                            currentBP,
-                            currentBP2,
-                            LocalData.AddGemsWanted - LocalData.sumGems,
-                            LocalData.AddGemsWanted,
-                            LocalData.AddGemsWanted
-                        )
-                    )
-                    if success then
-                        LocalData.IsSended = true
-                        saveSettings(LocalData)
-                    end
-                end)
-            end
-            saveSettings(LocalData)
-        end
-
-        -- Prepare regular webhook
-        local InfoGameEnd = "N/A"
-        pcall(function()
-            InfoGameEnd = player.PlayerGui.ResultsUI.Holder.Title.Text
-        end)
-
-        -- Get all other stats
-        local stats = {
-            Level = player.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text,
-            Gold = player["_stats"]["gold_amount"].Value,
-            XP = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text,
-            Title = player.PlayerGui.NewArea.holder.areaTitle.Text,
-            Description = player.PlayerGui.NewArea.holder.areaDescription.Text,
-            Difficulty = player.PlayerGui.NewArea.holder.Difficulty.Text,
-            Wave = player.PlayerGui.ResultsUI.Holder.Middle.WavesCompleted.Text,
-            Time = player.PlayerGui.ResultsUI.Holder.Middle.Timer.Text,
-            Kills = player["_stats"].kills.Value
-        }
-
-        -- Get earned items
-        local AllItem = ""
-        pcall(function()
-            local UnitInfo = player.PlayerGui:WaitForChild("UnitInfo", 10)
-            if UnitInfo and UnitInfo:FindFirstChild("holder") and UnitInfo.holder:FindFirstChild("info1") then
-                local UnitNameText = UnitInfo.holder.info1.UnitName.UnitNameText
-                AllItem = "◈ " .. UnitNameText.Text .. "\n"
-            end
-        end)
-
-        -- Create webhook description
-        local descFormat = string.format(
-            "🔒・Username : ||%s||\n" ..
-            "```md\n#Profile\n" ..
-            "💎・Gems : %s\n" ..
-            "🟡・Gold : %s\n" ..
-            "🧪・Level : %s\n" ..
-            "🔋・Battle Pass : %s [%s]" ..
-            "```\n" ..
-            "```md\n#Game Information\n" ..
-            "- Result : %s\n" ..
-            "- Map : %s\n" ..
-            "- Mode : %s\n" ..
-            "- Difficulty : %s\n" ..
-            "- Wave : %s | Time: %s" ..
-            "```\n" ..
-            "```md\n#Enemies Killed\n" ..
-            "- %d" ..
-            "```\n" ..
-            "```md\n#Rewards\n" ..
-            "◈ %s 💎\n" ..
-            "◈ %s 🍀\n" ..
-            "%s" ..
-            "```\n" ..
-            "```md\n#Package Info\n" ..
-            "- ฟามเพชรจำนวน : %d 💎\n" ..
-            "- ดำเนินการแล้ว : [%d|%d]" ..
-            "```\n",
-            player.Name,
-            GemGET,
-            stats.Gold,
-            stats.Level,
-            currentBP,
-            currentBP2,
-            InfoGameEnd,
-            stats.Title,
-            stats.Description,
-            stats.Difficulty,
-            GetNumberFromString(stats.Wave) or 0,
-            GetTimeFromString(stats.Time) or "N/A",
-            tonumber(stats.Kills) or 0,
-            GemGET,
-            stats.XP,
-            AllItem,
-            LocalData.AddGemsWanted,
-            LocalData.AddGemsWanted - LocalData.sumGems,
-            LocalData.AddGemsWanted
-        )
-
-        -- Add remaining gems info if applicable
-        if LocalData.sumGems > 0 then
-            descFormat = descFormat .. string.format(
-                "```md\n- เหลือที่ต้องฟามอีก : %d 💎```",
-                LocalData.sumGems
+            -- สร้างคำอธิบายสำหรับ Webhook
+            local descFormat = "🔒・Username : ||%s||\n```md\n#Profile\n💎・เพชร : %s\n🟡・ทอง : %s\n🧪・เลเวล: %s\n🔋・แบทเทินพาส : %s [%s]```\n"
+                .. "```md\n#Game Infomation\n- ผลการเล่น : %s\n- แมพ : %s\n- ความยาก : %s\n- เวฟ : %s | เวลาที่เล่น %s นาที```\n"
+                .. "```md\n#Enemies Killed\n- %d```\n"
+                .. "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"
+                .. "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎\n- เพชรที่ต้องฟาม : [%d|%d]```\n"
+                .. "- จ้างโดยคุณ: <@%s>"
+  
+            local finalDesc = string.format(
+                descFormat,
+                Player.Name,
+                GemPath and GemPath.Value or "N/A",
+                GoldPath and GoldPath.Value or "N/A",
+                Level or "???",
+                currentBP or "N/A",
+                currentBP2 or "N/A",
+                InfoGameEnd or "N/A",
+                (TitlePath and TitlePath.Text or "N/A") .. "\n- โหมด : " .. (DescPath and DescPath.Text or "N/A"),
+                DiffPath and DiffPath.Text or "N/A",
+                GetNumberFromString(WaveCompleted) or 0,
+                GetTimeFromString(TimeCompleted) or "N/A",
+                tonumber(KillsInGame) or 0,
+                Gem or "N/A",
+                XP or "N/A",
+                AllItem,
+                AddGemsWanted,
+                tonumber(TotalGems) or 0,
+                MaxGems,
+                DiscordID
             )
-        end
 
-        -- Send regular webhook
-        local req = http_request or request or HttpPost or syn and syn.request
-        if req then
-            local BodyJson = {
-                content = "",
-                embeds = {
-                    {
-                        title = "** <a:lp:1054740345709146182>  Round Complete! <a:lp:1054740345709146182>  **",
-                        description = descFormat,
-                        type = "rich",
-                        color = 0x33FFCC,
-                        image = { url = ThumbnailURL },
-                        footer = { icon_url = LogoURLs, text = "PLaNS SHOP" },
-                        timestamp = DateTime.now():ToIsoDate()
+            -- ส่ง Webhook
+            local req = http_request or request or HttpPost or syn and syn.request
+            if req then
+                local BodyJson = {
+                    content = "",
+                    embeds = {
+                        {
+                            title = "** <a:lp:1054740345709146182>  เล่นจบแล้วจ้า <a:lp:1054740345709146182>  **",
+                            description = finalDesc,
+                            type = "rich",
+                            color = 0x33FFCC,
+                            image = { url = ThumbnailURL },
+                            footer = { icon_url = LogoURLs, text = "PLaNS SHOP" },
+                            timestamp = DateTime.now():ToIsoDate()
+                        }
                     }
                 }
-            }
 
-            req({
-                Url = _G.Webhook,
-                Method = "POST",
-                Headers = { ["Content-Type"] = "application/json" },
-                Body = HttpService:JSONEncode(BodyJson)
-            })
+                req({
+                    Url = _G.Webhook,
+                    Method = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body = game.HttpService:JSONEncode(BodyJson)
+                })
+            else
+                warn("ไม่พบฟังก์ชัน request => ไม่สามารถส่ง Webhook ได้")
+            end
         end
     end
 
-    -- Connect to RunService for continuous monitoring
+    -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
     RunService.Stepped:Connect(function()
         if GameFinished.Value == true then
-            task.delay(2.5, function()  -- Delay to ensure UI is loaded
+            task.delay(3, function()
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
-            WebhookSent = false  -- Reset for next game
+            -- รีเซ็ต WebhookSent เมื่อค่า GameFinished กลับมาเป็น false
+            WebhookSent = false
         end
     end)
+else
+    print("ยังอยู่ในล๊อบบี้หรือไม่มี GameFinished")
 end
 
+
+
 --------------------------------------------------------------------------------
--- (I) User Interface
+-- (J) สร้าง UI (Lib): "Add Gems" => MaxGems = currentGems + AddGemsWanted
 --------------------------------------------------------------------------------
 
 local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
-local Window = Library:CreateWindow({
-    Title = "PLaNS x SHOP",
-    Center = true,
+local Window  = Library:CreateWindow({
+    Title    = "PLaNS x SHOP",
+    Center   = true,
     AutoShow = false,
 })
 
-local MainTab = Window:AddTab("PLaNS x SHOP")
+local MainTab     = Window:AddTab("PLaNS x SHOP")
 local SettingsBox = MainTab:AddLeftGroupbox("Settings")
 
--- Add Gems Input
+-- Input “Add Gems”
 local addGemsInput = SettingsBox:AddInput('Add Gems', {
-    Numeric = true,
-    Finished = false,
-    Text = 'How many gems?',
+    Numeric     = true,
+    Finished    = false,
+    Text        = 'ต้องการเพิ่มกี่เพชร?',
     Placeholder = 'Ex: 20000',
-    Default = AddGemsWanted
+    Default     = AddGemsWanted
 })
 
--- Discord ID Input
+-- Input “Discord ID”
 local di = SettingsBox:AddInput('Discord ID', {
-    Numeric = false,
-    Finished = false,
-    Text = 'Discord ID',
+    Numeric     = false,
+    Finished    = false,
+    Text        = 'Discord ID',
     Placeholder = 'Ex: 12345678',
-    Default = DiscordID
+    Default     = DiscordID
 })
 
--- Save Button
+-- ปุ่ม Save
 SettingsBox:AddButton('Save Settings', function()
     local addGemsNum = tonumber(addGemsInput.Value) or 0
-    -- Validate input
-    if addGemsNum > 100000 then
-        addGemsNum = 100000
-        addGemsInput.Value = "100000"
-    end
-    
-    LocalData.MaxGems = currentGems + math.max(addGemsNum, 0)
-    LocalData.DiscordID = di.Value
+    LocalData.MaxGems       = currentGems + math.max(addGemsNum, 0)
+    LocalData.DiscordID     = di.Value
     LocalData.AddGemsWanted = addGemsNum
-    LocalData.sumGems = addGemsNum
-    LocalData.IsSended = false
-    
+    LocalData.IsSended      = false
+
     if typeof(LocalData.OldGems) ~= "number" then
         LocalData.OldGems = 0
     end
@@ -577,57 +610,86 @@ SettingsBox:AddButton('Save Settings', function()
     end
 
     saveSettings(LocalData)
-    DiscordID = di.Value
+
+    -- << อัปเดตตัวแปร DiscordID ระดับสคริปต์ด้วย >>
+    DiscordID = di.Value    -- <<--- เพิ่มบรรทัดนี้
     
     print(string.format(
-        "[Save] AddGemsWanted=%d => MaxGems=%d, sumGems=%d, DiscordID=%s",
-        addGemsNum, LocalData.MaxGems, LocalData.sumGems, LocalData.DiscordID
+        "[Save] AddGemsWanted=%d => MaxGems=%d, DiscordID=%s",
+        addGemsNum, LocalData.MaxGems, LocalData.DiscordID
     ))
 end)
 
--- Test Button
+local dd = LocalData.DiscordID or ""
+-- ปุ่ม Test
 SettingsBox:AddButton('Test Webhook', function()
     local testStr = string.format(
-        "Test!\nPlayer : ||%s||\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n- Current Gems : %d\n- Target : %d\n\n```md\n#Package\n- Amount : %d gems\n- Remaining gems : %d 💎```",
+        "ทดสอบ!\nผู้เล่น : ||%s||\n- ทอง : %d\n- เลเวล : %s\n- เวลแบทเทินพาส : %s [%s]\n- เพชรตอนนี้ : %d\n- เป้าหมาย : %d\n\n```md\n#แพคเกจที่จ้าง\n- จำนวน : %d เพชร```",
         player.Name,
         currentGold,
-        currentLevel,
+        currentLevel,  -- ใช้ Level ล่าสุด (อาจเป็นของใหม่ ถ้าหาเจอ)
         currentBP,
         currentBP2,
         currentGems,
         LocalData.MaxGems,
-        LocalData.AddGemsWanted,
-        LocalData.sumGems
+        LocalData.AddGemsWanted
     )
-    sendWebhook2("<a:alert:1021734820461674527> Test Notification <a:alert:1021734820461674527>", testStr)
+    sendWebhook2("<a:alert:1021734820461674527> ทดสอบแจ้งเตือนๆ <a:alert:1021734820461674527>", testStr .. "<@"..dd..">")
 end)
 
--- White Screen Toggle
+-- Toggle White Screen
 SettingsBox:AddLabel("Optional UI Toggles")
 local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
-    Text = 'Toggle White Screen',
+    Text    = 'Toggle White Screen',
     Default = false,
 })
 WhiteScreenToggle:OnChanged(function(v)
     RunService:Set3dRenderingEnabled(not v)
 end)
 
--- UI Toggle Button
+--------------------------------------------------------------------------------
+-- (K) ปุ่มไอคอน Toggle UI
+--------------------------------------------------------------------------------
+
+--[[do
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "UI_ToggleButton"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    ScreenGui.DisplayOrder = 9999
+
+    -- ใส่ Parent = PlayerGui
+    ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+    local ToggleButton = Instance.new("ImageButton")
+    ToggleButton.Name = "ToggleButton"
+    ToggleButton.Size = UDim2.new(0, 50, 0, 50)
+    ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+    ToggleButton.BackgroundTransparency = 1
+    ToggleButton.Image = "rbxassetid://3570695787"
+    ToggleButton.Parent = ScreenGui
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        Library.Toggle()
+    end)
+end]]
 do
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "UI_ToggleButton"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     ScreenGui.DisplayOrder = 9999
+
+    -- ใส่ Parent = PlayerGui
     ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
     local ToggleButton = Instance.new("ImageButton")
     ToggleButton.Name = "ToggleButton"
     ToggleButton.Size = UDim2.new(0, 25, 0, 25)
     ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
-    ToggleButton.BackgroundTransparency = 0
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 182, 255)
-    ToggleButton.ImageTransparency = 1
+    ToggleButton.BackgroundTransparency = 0 -- ตั้งค่าความโปร่งใสให้มองเห็นสีพื้นหลัง
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 182, 255) -- สีชมพูอ่อน (Light Pink)
+    ToggleButton.ImageTransparency = 1 -- ซ่อนรูปภาพ เพื่อให้เห็นแต่สีพื้นหลัง
     ToggleButton.Parent = ScreenGui
 
     ToggleButton.MouseButton1Click:Connect(function()
@@ -635,4 +697,6 @@ do
     end)
 end
 
-print("Script loaded successfully! Using saved level if spawn_units not found.")
+
+
+print("Script loaded! ถ้าไม่มี spawn_units => ใช้ Level เดิมจากไฟล์ SavedLevel แทน จนกว่าจะหาเจอใหม่.") 
