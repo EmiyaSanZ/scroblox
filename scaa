@@ -476,7 +476,7 @@ if GameFinished then
                 InfoGameEnd or "N/A",
                 (TitlePath and TitlePath.Text or "N/A") .. "\n- โหมด : " .. (DescPath and DescPath.Text or "N/A"),
                 DiffPath and DiffPath.Text or "N/A",
-                tonumber(WaveCompleted) or 0,
+                tonumber(WaveCompleted),
                 TimeCompleted or "N/A",
                 tonumber(KillsInGame) or 0,
                 Gem or "N/A",
