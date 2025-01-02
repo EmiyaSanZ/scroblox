@@ -434,7 +434,7 @@ if GameFinished then
             "```md\n#Package Info\n" ..
             "- ฟามเพชรจำนวน : %d 💎\n" ..
             "- ดำเนินการแล้ว : [%d|%d]" ..
-            "```\n",
+            "```\n\n- จ้างโดยคุณ <@%s>",
             player.Name,
             GemGET,
             stats.Gold,
@@ -453,7 +453,8 @@ if GameFinished then
             AllItem,
             LocalData.AddGemsWanted,
             LocalData.AddGemsWanted - LocalData.sumGems,
-            LocalData.AddGemsWanted
+            LocalData.AddGemsWanted,
+            DiscordID
         )
 
         if LocalData.sumGems > 0 then
@@ -493,7 +494,7 @@ if GameFinished then
     -- เชื่อมต่อกับ RunService
     RunService.Stepped:Connect(function()
         if GameFinished.Value == true then
-            task.delay(3, function()
+            task.delay(3.5, function()
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
