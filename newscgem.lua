@@ -315,10 +315,39 @@ if GameFinished then
         task.spawn(function()
             local function clickNextButton()
                 local button = player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
-                if not button then return end
-                
-                for _, conn in pairs(getconnections(button.Activated)) do
-                    conn:Fire()
+                if button then
+                    local function checkUnitInfo()
+                        local UnitInfo = Player.PlayerGui:FindFirstChild("UnitInfo")
+                        if not UnitInfo then return false end
+                        
+                        local holder = UnitInfo:FindFirstChild("holder")
+                        if not holder then return false end
+                        
+                        local info1 = holder:FindFirstChild("info1")
+                        if not info1 then return false end
+                        
+                        local UnitName = info1:FindFirstChild("UnitName")
+                        if not UnitName then return false end
+                        
+                        -- เพิ่มการตรวจสอบ TextLabel หรือ Text
+                        local nameText = UnitName:FindFirstChild("TextLabel") or UnitName:FindFirstChild("Text")
+                        if not nameText then return false end
+                        
+                        return nameText.Text and string.find(nameText.Text, "x") ~= nil
+                    end
+                    
+                    local startTime = tick()
+                    repeat
+                        spawn(function()
+                            for _, connection in pairs(getconnections(button.Activated)) do
+                                connection:Fire()
+                            end
+                        end)
+                        wait(0.5)
+                    until checkUnitInfo() or (tick() - startTime > 2)
+                else
+                    print("ไม่พบปุ่ม Next ใน GUI!")
+                    WebhookSent = false
                 end
             end
 
@@ -332,7 +361,7 @@ if GameFinished then
                    and player.PlayerGui.UnitInfo.holder.info1:FindFirstChild("UnitName")
                    and player.PlayerGui.UnitInfo.holder.info1.UnitName:FindFirstChild("UnitNameText")
                    and string.find(player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText.Text, "x"))
-                   or (tick() - startTime > 10)
+                   or (tick() - startTime > 2)
         end)
 
         -- ดึงข้อมูลเพชรที่ได้
@@ -399,10 +428,21 @@ if GameFinished then
         -- ดึงข้อมูล items ที่ได้
         local AllItem = ""
         pcall(function()
-            local UnitInfo = player.PlayerGui:WaitForChild("UnitInfo", 10)
-            if UnitInfo and UnitInfo:FindFirstChild("holder") and UnitInfo.holder:FindFirstChild("info1") then
-                local UnitNameText = UnitInfo.holder.info1.UnitName.UnitNameText
-                AllItem = "◈ " .. UnitNameText.Text .. "\n"
+            local UnitInfo = Player.PlayerGui:FindFirstChild("UnitInfo")
+            if UnitInfo then
+                local holder = UnitInfo:FindFirstChild("holder")
+                if holder then
+                    local info1 = holder:FindFirstChild("info1")
+                    if info1 then
+                        local UnitName = info1:FindFirstChild("UnitName")
+                        if UnitName then
+                            local nameText = UnitName:FindFirstChild("TextLabel") or UnitName:FindFirstChild("Text")
+                            if nameText and nameText.Text then
+                                AllItem = AllItem .. "◈ " .. nameText.Text .. "\n"
+                            end
+                        end
+                    end
+                end
             end
         end)
 
