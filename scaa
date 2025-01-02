@@ -521,7 +521,7 @@ if GameFinished then
     -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
     RunService.Stepped:Connect(function()
         if GameFinished.Value == true then
-            task.delay(3.5, function()
+            task.delay(4, function()
                 SendGameFinishedWebhook()
             end)
         elseif GameFinished.Value == false and WebhookSent then
