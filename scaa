@@ -9,6 +9,15 @@ if not game:IsLoaded() then
     game.Loaded:Wait()
 end
 
+function GetNumberFromString(S)
+    return string.match(S,"%d+")
+end 
+
+function GetTimeFromString(S)
+    return string.match(S, "%d+:%d+")
+end
+
+
 local Players    = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local HttpService= game:GetService("HttpService")
@@ -449,6 +458,24 @@ if GameFinished then
                 InfoGameEnd = Player.PlayerGui.ResultsUI.Holder.Title.Text
                 KillsInGame = Player["_stats"].kills.Value
 
+                -- ดึงค่า WaveCompleted โดยเอาเฉพาะตัวเลข
+                local function GetWaveCompleted()
+                    local wave = "0" -- ค่าเริ่มต้น
+                    pcall(function()
+                        -- ลองดึงค่าจาก GUI
+                        local waveObj = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.Middle:FindFirstChild("WavesCompleted")
+                        if waveObj and waveObj:IsA("TextLabel") then
+                            wave = waveObj.Text:match("%d+") -- ใช้ pattern เพื่อดึงเฉพาะตัวเลข
+                        end
+                    end)
+                    return wave
+                end
+
+                -- เรียกใช้งานฟังก์ชัน
+                local WaveCompleted = GetWaveCompleted()
+                print("WaveCompleted = " .. WaveCompleted)
+
+
                 -- ดึงข้อมูลไอเทมที่ได้รับ
                 local UnitInfo = Player.PlayerGui:WaitForChild("UnitInfo", 10)
                 if UnitInfo and UnitInfo:FindFirstChild("holder") and UnitInfo.holder:FindFirstChild("info1") then
@@ -459,12 +486,12 @@ if GameFinished then
 
             -- สร้างคำอธิบายสำหรับ Webhook
             local descFormat = "🔒・Username : ||%s||\n```md\n#Profile\n💎・เพชร : %s\n🟡・ทอง : %s\n🧪・เลเวล: %s\n🔋・แบทเทินพาส : %s [%s]```\n"
-                .. "```md\n#Game Infomation\n- ผลการเล่น : %s\n- แมพ : %s\n- ความยาก : %s\n- เวฟ : %s | %s```\n"
+                .. "```md\n#Game Infomation\n- ผลการเล่น : %s\n- แมพ : %s\n- ความยาก : %s\n- เวฟ : %s | เวลาที่เล่น %s นาที```\n"
                 .. "```md\n#Enemies Killed\n- %d```\n"
                 .. "```md\n#Rewards:\n◈ %s 💎\n◈ %s 🍀\n%s```\n"
                 .. "```md\n#แพคเกจที่จ้าง\n- ฟามเพชรจำนวน : %d เพชร 💎\n- เพชรที่ต้องฟาม : [%d|%d]```\n"
                 .. "- จ้างโดยคุณ: <@%s>"
-
+  
             local finalDesc = string.format(
                 descFormat,
                 Player.Name,
@@ -476,8 +503,8 @@ if GameFinished then
                 InfoGameEnd or "N/A",
                 (TitlePath and TitlePath.Text or "N/A") .. "\n- โหมด : " .. (DescPath and DescPath.Text or "N/A"),
                 DiffPath and DiffPath.Text or "N/A",
-                WaveCompleted or "N/A",
-                TimeCompleted or "N/A",
+                GetNumberFromString(WaveCompleted) or 0,
+                GetTimeFromString(TimeCompleted) or "N/A",
                 tonumber(KillsInGame) or 0,
                 Gem or "N/A",
                 XP or "N/A",
