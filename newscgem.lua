@@ -506,113 +506,182 @@ end
 -- (I) User Interface
 --------------------------------------------------------------------------------
 
-local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
-local Window = Library:CreateWindow({
-    Title = "PLaNS x SHOP",
-    Center = true,
-    AutoShow = false,
-})
+-- แก้ไขส่วน UI Interface
+local Library = nil
+local Window = nil
+local MainTab = nil
+local SettingsBox = nil
 
-local MainTab = Window:AddTab("PLaNS x SHOP")
-local SettingsBox = MainTab:AddLeftGroupbox("Settings")
-
--- Add Gems Input
-local addGemsInput = SettingsBox:AddInput('Add Gems', {
-    Numeric = true,
-    Finished = false,
-    Text = 'How many gems?',
-    Placeholder = 'Ex: 20000',
-    Default = AddGemsWanted
-})
-
--- Discord ID Input
-local di = SettingsBox:AddInput('Discord ID', {
-    Numeric = false,
-    Finished = false,
-    Text = 'Discord ID',
-    Placeholder = 'Ex: 12345678',
-    Default = DiscordID
-})
-
--- Save Button
-SettingsBox:AddButton('Save Settings', function()
-    local addGemsNum = tonumber(addGemsInput.Value) or 0
-    -- Validate input
-    if addGemsNum > 100000 then
-        addGemsNum = 100000
-        addGemsInput.Value = "100000"
-    end
-    
-    LocalData.MaxGems = currentGems + math.max(addGemsNum, 0)
-    LocalData.DiscordID = di.Value
-    LocalData.AddGemsWanted = addGemsNum
-    LocalData.sumGems = addGemsNum
-    LocalData.IsSended = false
-    
-    if typeof(LocalData.OldGems) ~= "number" then
-        LocalData.OldGems = 0
-    end
-    if LocalData.OldGems == 0 then
-        LocalData.OldGems = currentGems
+-- สร้างฟังก์ชันสำหรับโหลด UI
+local function loadUI()
+    -- ลบ UI เก่าถ้ามี
+    if Library then
+        Library:Unload()
     end
 
-    saveSettings(LocalData)
-    DiscordID = di.Value
-    
-    print(string.format(
-        "[Save] AddGemsWanted=%d => MaxGems=%d, sumGems=%d, DiscordID=%s",
-        addGemsNum, LocalData.MaxGems, LocalData.sumGems, LocalData.DiscordID
-    ))
-end)
+    -- โหลด UI ใหม่
+    task.spawn(function()
+        Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
+        
+        Window = Library:CreateWindow({
+            Title = "PLaNS x SHOP",
+            Center = true,
+            AutoShow = true,
+        })
 
--- Test Button
-SettingsBox:AddButton('Test Webhook', function()
-    local testStr = string.format(
-        "Test!\nPlayer : ||%s||\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n- Current Gems : %d\n- Target : %d\n\n```md\n#Package\n- Amount : %d gems\n- Remaining gems : %d 💎```",
-        player.Name,
-        currentGold,
-        currentLevel,
-        currentBP,
-        currentBP2,
-        currentGems,
-        LocalData.MaxGems,
-        LocalData.AddGemsWanted,
-        LocalData.sumGems
-    )
-    sendWebhook2("<a:alert:1021734820461674527> Test Notification <a:alert:1021734820461674527>", testStr)
-end)
+        MainTab = Window:AddTab("PLaNS x SHOP")
+        SettingsBox = MainTab:AddLeftGroupbox("Settings")
 
--- White Screen Toggle
-SettingsBox:AddLabel("Optional UI Toggles")
-local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
-    Text = 'Toggle White Screen',
-    Default = false,
-})
-WhiteScreenToggle:OnChanged(function(v)
-    RunService:Set3dRenderingEnabled(not v)
-end)
+        -- Add Gems Input with error handling
+        local addGemsInput = SettingsBox:AddInput('Add Gems', {
+            Numeric = true,
+            Finished = false,
+            Text = 'How many gems?',
+            Placeholder = 'Ex: 20000',
+            Default = AddGemsWanted
+        })
 
--- UI Toggle Button
-do
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "UI_ToggleButton"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    ScreenGui.DisplayOrder = 9999
-    ScreenGui.Parent = player:WaitForChild("PlayerGui")
+        -- Discord ID Input with error handling
+        local di = SettingsBox:AddInput('Discord ID', {
+            Numeric = false,
+            Finished = false,
+            Text = 'Discord ID',
+            Placeholder = 'Ex: 12345678',
+            Default = DiscordID
+        })
 
-    local ToggleButton = Instance.new("ImageButton")
-    ToggleButton.Name = "ToggleButton"
-    ToggleButton.Size = UDim2.new(0, 25, 0, 25)
-    ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
-    ToggleButton.BackgroundTransparency = 0
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 182, 255)
-    ToggleButton.ImageTransparency = 1
-    ToggleButton.Parent = ScreenGui
+        -- Save Button with confirmation
+        SettingsBox:AddButton('Save Settings', function()
+            local success, error = pcall(function()
+                local addGemsNum = tonumber(addGemsInput.Value) or 0
+                if addGemsNum > 100000 then
+                    addGemsNum = 100000
+                    addGemsInput.Value = "100000"
+                end
+                
+                LocalData.MaxGems = currentGems + math.max(addGemsNum, 0)
+                LocalData.DiscordID = di.Value
+                LocalData.AddGemsWanted = addGemsNum
+                LocalData.sumGems = addGemsNum
+                LocalData.IsSended = false
+                
+                if typeof(LocalData.OldGems) ~= "number" then
+                    LocalData.OldGems = 0
+                end
+                if LocalData.OldGems == 0 then
+                    LocalData.OldGems = currentGems
+                end
 
-    ToggleButton.MouseButton1Click:Connect(function()
-        Library.Toggle()
+                saveSettings(LocalData)
+                DiscordID = di.Value
+                
+                print(string.format(
+                    "[Save] AddGemsWanted=%d => MaxGems=%d, sumGems=%d, DiscordID=%s",
+                    addGemsNum, LocalData.MaxGems, LocalData.sumGems, LocalData.DiscordID
+                ))
+            end)
+            
+            if not success then
+                warn("Failed to save settings:", error)
+            end
+        end)
+
+        -- Test Button with error handling
+        SettingsBox:AddButton('Test Webhook', function()
+            local success, error = pcall(function()
+                local testStr = string.format(
+                    "Test!\nPlayer : ||%s||\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n- Current Gems : %d\n- Target : %d\n\n```md\n#Package\n- Amount : %d gems\n- Remaining gems : %d 💎```",
+                    player.Name,
+                    currentGold,
+                    currentLevel,
+                    currentBP,
+                    currentBP2,
+                    currentGems,
+                    LocalData.MaxGems,
+                    LocalData.AddGemsWanted,
+                    LocalData.sumGems
+                )
+                sendWebhook2("<a:alert:1021734820461674527> Test Notification <a:alert:1021734820461674527>", testStr)
+            end)
+            
+            if not success then
+                warn("Failed to send test webhook:", error)
+            end
+        end)
+
+        -- White Screen Toggle with error handling
+        SettingsBox:AddLabel("Optional UI Toggles")
+        local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
+            Text = 'Toggle White Screen',
+            Default = false,
+        })
+        
+        WhiteScreenToggle:OnChanged(function(v)
+            pcall(function()
+                RunService:Set3dRenderingEnabled(not v)
+            end)
+        end)
     end)
 end
 
-print("Script loaded successfully! Using saved level if spawn_units not found.")
+-- สร้าง Toggle Button ที่มีความเสถียรมากขึ้น
+do
+    local function createToggleButton()
+        local ScreenGui = Instance.new("ScreenGui")
+        ScreenGui.Name = "UI_ToggleButton"
+        ScreenGui.ResetOnSpawn = false
+        ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        ScreenGui.DisplayOrder = 9999
+
+        local ToggleButton = Instance.new("ImageButton")
+        ToggleButton.Name = "ToggleButton"
+        ToggleButton.Size = UDim2.new(0, 25, 0, 25)
+        ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
+        ToggleButton.BackgroundTransparency = 0
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 182, 255)
+        ToggleButton.ImageTransparency = 1
+
+        -- เพิ่ม UICorner ให้ปุ่มดูสวยงามขึ้น
+        local UICorner = Instance.new("UICorner")
+        UICorner.CornerRadius = UDim.new(0, 5)
+        UICorner.Parent = ToggleButton
+
+        ToggleButton.Parent = ScreenGui
+        ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+        -- เพิ่ม hover effect
+        ToggleButton.MouseEnter:Connect(function()
+            game:GetService("TweenService"):Create(ToggleButton, TweenInfo.new(0.3), {
+                BackgroundColor3 = Color3.fromRGB(255, 200, 255)
+            }):Play()
+        end)
+
+        ToggleButton.MouseLeave:Connect(function()
+            game:GetService("TweenService"):Create(ToggleButton, TweenInfo.new(0.3), {
+                BackgroundColor3 = Color3.fromRGB(255, 182, 255)
+            }):Play()
+        end)
+
+        -- ปรับปรุง click handler
+        local debounce = false
+        ToggleButton.MouseButton1Click:Connect(function()
+            if not debounce then
+                debounce = true
+                if Library then
+                    Library:Toggle()
+                else
+                    loadUI()
+                end
+                debounce = false
+            end
+        end)
+    end
+
+    -- ลบ UI เก่าถ้ามี และสร้างใหม่
+    local oldGui = player.PlayerGui:FindFirstChild("UI_ToggleButton")
+    if oldGui then oldGui:Destroy() end
+    createToggleButton()
+end
+
+-- โหลด UI ครั้งแรก
+loadUI()
