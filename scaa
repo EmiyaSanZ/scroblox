@@ -406,7 +406,7 @@ end
 local GameFinished = WaitForGameFinished()
 
 -- ตัวแปรเพื่อป้องกันการส่ง Webhook ซ้ำ
-local WebhookSent = false
+local WebhookSent = true
 
 if GameFinished then
     -- ฟังก์ชันที่ใช้ส่ง Webhook
@@ -457,24 +457,6 @@ if GameFinished then
                 TotalGems = GemPath.Value
                 InfoGameEnd = Player.PlayerGui.ResultsUI.Holder.Title.Text
                 KillsInGame = Player["_stats"].kills.Value
-
-                -- ดึงค่า WaveCompleted โดยเอาเฉพาะตัวเลข
-                local function GetWaveCompleted()
-                    local wave = "0" -- ค่าเริ่มต้น
-                    pcall(function()
-                        -- ลองดึงค่าจาก GUI
-                        local waveObj = game:GetService("Players").LocalPlayer.PlayerGui.ResultsUI.Holder.Middle:FindFirstChild("WavesCompleted")
-                        if waveObj and waveObj:IsA("TextLabel") then
-                            wave = waveObj.Text:match("%d+") -- ใช้ pattern เพื่อดึงเฉพาะตัวเลข
-                        end
-                    end)
-                    return wave
-                end
-
-                -- เรียกใช้งานฟังก์ชัน
-                local WaveCompleted = GetWaveCompleted()
-                print("WaveCompleted = " .. WaveCompleted)
-
 
                 -- ดึงข้อมูลไอเทมที่ได้รับ
                 local UnitInfo = Player.PlayerGui:WaitForChild("UnitInfo", 10)
@@ -547,15 +529,15 @@ if GameFinished then
 
     -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
     RunService.Stepped:Connect(function()
-        if GameFinished.Value == true then
-            task.delay(2, function()
-                SendGameFinishedWebhook()
-            end)
-        elseif GameFinished.Value == false and WebhookSent then
-            -- รีเซ็ต WebhookSent เมื่อค่า GameFinished กลับมาเป็น false
-            WebhookSent = false
+        if GameFinished and GameFinished.Value == true then
+            if not WebhookSent then
+                task.delay(1, SendGameFinishedWebhook)
+                WebhookSent = true
+            end
+        elseif GameFinished and GameFinished.Value == false then
+            WebhookSent = true --false
         end
-    end)
+    end)    
 else
     print("ยังอยู่ในล๊อบบี้หรือไม่มี GameFinished")
 end
