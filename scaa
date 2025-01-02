@@ -434,7 +434,7 @@ if GameFinished then
                       Player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText and
                       string.find(Player.PlayerGui.UnitInfo.holder.info1.UnitName.UnitNameText.Text, "x")
             else
-                warn("ไม่พบปุ่ม Next ใน GUI!")
+                print("ไม่พบปุ่ม Next ใน GUI!")
             end
 
             -- ดึงข้อมูลสำหรับ Webhook
@@ -527,17 +527,16 @@ if GameFinished then
         end
     end
 
-    -- ใช้ RunService.Stepped เพื่อตรวจสอบ GameFinished.Value
+    -- เชื่อมต่อกับ RunService
     RunService.Stepped:Connect(function()
-        if GameFinished and GameFinished.Value == true then
-            if not WebhookSent then
-                task.delay(1, SendGameFinishedWebhook)
-                WebhookSent = true
-            end
-        elseif GameFinished and GameFinished.Value == false then
-            WebhookSent = true --false
+        if GameFinished.Value == true then
+            task.delay(3, function()
+                SendGameFinishedWebhook()
+            end)
+        elseif GameFinished.Value == false and WebhookSent then
+            WebhookSent = false
         end
-    end)    
+    end)
 else
     print("ยังอยู่ในล๊อบบี้หรือไม่มี GameFinished")
 end
