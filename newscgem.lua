@@ -547,113 +547,74 @@ end
 -- (I) User Interface
 --------------------------------------------------------------------------------
 
-local Library = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI'))()
-local Window = Library:CreateWindow({
-    Title = "PLaNS x SHOP",
-    Center = true,
-    AutoShow = false,
+local OrionLib = loadstring(game:HttpGet('https://raw.githubusercontent.com/EmiyaSanZ/Lib/main/UI2.lua'))()
+
+
+local Window = OrionLib:MakeWindow({
+    Name = "PLaNS x SHOP",
+    HidePremium = false,
+    SaveConfig = true,
+    Minimized = true,
+    ConfigFolder = "PLaNSConfig"
 })
 
-local MainTab = Window:AddTab("PLaNS x SHOP")
-local SettingsBox = MainTab:AddLeftGroupbox("Settings")
 
--- Add Gems Input
-local addGemsInput = SettingsBox:AddInput('Add Gems', {
-    Numeric = true,
-    Finished = false,
-    Text = 'How many gems?',
-    Placeholder = 'Ex: 20000',
-    Default = AddGemsWanted
+local MainTab = Window:MakeTab({
+    Name = "PLaNS x SHOP",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
 })
 
--- Discord ID Input
-local di = SettingsBox:AddInput('Discord ID', {
-    Numeric = false,
-    Finished = false,
-    Text = 'Discord ID',
-    Placeholder = 'Ex: 12345678',
-    Default = DiscordID
+local SettingsSection = MainTab:AddSection({
+    Name = "Settings"
 })
 
--- Save Button
-SettingsBox:AddButton('Save Settings', function()
-    local addGemsNum = tonumber(addGemsInput.Value) or 0
-    -- Validate input
-    if addGemsNum > 100000 then
-        addGemsNum = 100000
-        addGemsInput.Value = "100000"
+SettingsSection:AddTextbox({
+    Name = "How many gems?",
+    Default = tostring(AddGemsWanted),
+    TextDisappear = false,
+    Callback = function(Value)
+        local addGemsNum = tonumber(Value) or 0
+        if addGemsNum > 100000 then
+            addGemsNum = 100000
+        end
+        
+        LocalData.MaxGems = currentGems + math.max(addGemsNum, 0)
+        LocalData.AddGemsWanted = addGemsNum
+        LocalData.sumGems = addGemsNum
+        saveSettings(LocalData)
     end
-    
-    LocalData.MaxGems = currentGems + math.max(addGemsNum, 0)
-    LocalData.DiscordID = di.Value
-    LocalData.AddGemsWanted = addGemsNum
-    LocalData.sumGems = addGemsNum
-    LocalData.IsSended = false
-    
-    if typeof(LocalData.OldGems) ~= "number" then
-        LocalData.OldGems = 0
+})
+
+SettingsSection:AddTextbox({
+    Name = "Discord ID",
+    Default = DiscordID,
+    TextDisappear = false,
+    Callback = function(Value)
+        LocalData.DiscordID = Value
+        DiscordID = Value
+        saveSettings(LocalData)
     end
-    if LocalData.OldGems == 0 then
-        LocalData.OldGems = currentGems
-    end
+})
 
-    saveSettings(LocalData)
-    DiscordID = di.Value
-    
-    print(string.format(
-        "[Save] AddGemsWanted=%d => MaxGems=%d, sumGems=%d, DiscordID=%s",
-        addGemsNum, LocalData.MaxGems, LocalData.sumGems, LocalData.DiscordID
-    ))
-end)
-
--- Test Button
-SettingsBox:AddButton('Test Webhook', function()
-    local testStr = string.format(
-        "Test!\nPlayer : ||%s||\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n- Current Gems : %d\n- Target : %d\n\n```md\n#Package\n- Amount : %d gems\n- Remaining gems : %d 💎```",
-        player.Name,
-        currentGold,
-        currentLevel,
-        currentBP,
-        currentBP2,
-        currentGems,
-        LocalData.MaxGems,
-        LocalData.AddGemsWanted,
-        LocalData.sumGems
-    )
-    sendWebhook2("<a:alert:1021734820461674527> Test Notification <a:alert:1021734820461674527>", testStr)
-end)
-
--- White Screen Toggle
-SettingsBox:AddLabel("Optional UI Toggles")
-local WhiteScreenToggle = SettingsBox:AddToggle('White Screen', {
-    Text = 'Toggle White Screen',
+SettingsSection:AddToggle({
+    Name = "White Screen",
     Default = false,
+    Callback = function(Value)
+        RunService:Set3dRenderingEnabled(not Value)
+    end    
 })
-WhiteScreenToggle:OnChanged(function(v)
-    RunService:Set3dRenderingEnabled(not v)
-end)
 
--- UI Toggle Button
-do
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "UI_ToggleButton"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    ScreenGui.DisplayOrder = 9999
-    ScreenGui.Parent = player:WaitForChild("PlayerGui")
+SettingsSection:AddButton({
+    Name = "Test Webhook",
+    Callback = function()
+        local testStr = string.format(
+            "Test!\nPlayer : ||%s||\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n- เพชรตอนนี้ : %d\n- เป้าหมาย : %d\n\n```md\n#Package\n- จำนวนที่ต้องการ : %d gems\n- เหลือฟามเพชรอีก : %d 💎```",
+            player.Name, currentGold, currentLevel, currentBP, currentBP2,
+            currentGems, LocalData.MaxGems, LocalData.AddGemsWanted, LocalData.sumGems
+        )
+        sendWebhook2("<a:alert:1021734820461674527> Test Notification <a:alert:1021734820461674527>", testStr)
+    end    
+})
 
-    local ToggleButton = Instance.new("ImageButton")
-    ToggleButton.Name = "ToggleButton"
-    ToggleButton.Size = UDim2.new(0, 25, 0, 25)
-    ToggleButton.Position = UDim2.new(0, 10, 0.5, -25)
-    ToggleButton.BackgroundTransparency = 0
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 182, 255)
-    ToggleButton.ImageTransparency = 1
-    ToggleButton.Parent = ScreenGui
-
-    ToggleButton.MouseButton1Click:Connect(function()
-        Library.Toggle()
-    end)
-end
-
-print("Script loaded successfully! Using saved level if spawn_units not found.")
+OrionLib:Init()
