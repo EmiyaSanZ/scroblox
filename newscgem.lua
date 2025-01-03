@@ -415,6 +415,7 @@ if GameFinished then
         -- เตรียมข้อมูลสำหรับ webhook ปกติ
         local stats = {
             Level = player.PlayerGui["spawn_units"].Lives.Main.Desc.Level.Text,
+            GEMS = player["_stats"]["gem_amount"].Value,
             Gold = player["_stats"]["gold_amount"].Value,
             XP = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.XPReward.Main.Amount.Text,
             Title = player.PlayerGui.NewArea.holder.areaTitle.Text,
@@ -476,7 +477,7 @@ if GameFinished then
             "- ดำเนินการแล้ว : [%d|%d]" ..
             "```\n",
             player.Name,
-            GemGET,
+            stats.GEMS,
             stats.Gold,
             stats.Level,
             currentBP,
