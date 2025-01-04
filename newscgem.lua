@@ -600,7 +600,7 @@ SettingsSection:AddTextbox({
 
 SettingsSection:AddToggle({
     Name = "White Screen",
-    Default = false,
+    Default = true,
     Callback = function(Value)
         RunService:Set3dRenderingEnabled(not Value)
     end    
