@@ -388,7 +388,7 @@ if GameFinished then
                         string.format(
                             "🔒・Username : ||**%s**||\n" ..
                             "```md\n#Profile\n" ..
-                            "💎・This round gems : %d\n" ..
+                            "💎・Gems : %d\n" ..
                             "🟡・Gold : %d\n" ..
                             "🧪・Level : %s\n" ..
                             "🔋・Battle Pass : %s [%s]\n" ..
@@ -397,7 +397,7 @@ if GameFinished then
                             "```md\n#Package Info\n- ฟามเพชร : %d 💎```\n\n" ..
                             "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n[ฝาก +1 โปร์ไฟล์เฟสด้วยงับ](https://www.facebook.com/photo/?fbid=817544902138722&set=a.117678525458700)\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
                             player.Name,
-                            GemGET,
+                            currentGems,
                             currentGold,
                             currentLevel,
                             currentBP,
