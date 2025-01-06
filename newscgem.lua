@@ -351,7 +351,7 @@ if GameFinished then
             local function clickNextButton()
                 local button = player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
                 if button then
-                    task.wait(0.5)
+                    task.wait(0.25)
                     local function checkUnitInfo()
                         local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
                         if not UnitInfo then return false end
@@ -390,7 +390,7 @@ if GameFinished then
             local startTime = tick()
             repeat
                 clickNextButton()
-                task.wait(0.5)
+                task.wait(0.25)
             until (player.PlayerGui:FindFirstChild("UnitInfo") 
                    and player.PlayerGui.UnitInfo:FindFirstChild("holder")
                    and player.PlayerGui.UnitInfo.holder:FindFirstChild("info1")
@@ -464,7 +464,7 @@ if GameFinished then
 
         -- ดึงข้อมูล items ที่ได้
         local AllItem = ""
-        task.wait(0.5) -- รอก่อน
+        task.wait(0.25) -- รอก่อน
         pcall(function()
             local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
             if UnitInfo then
@@ -604,7 +604,7 @@ if GameFinished then
         local function clickNextButton()
             local button = player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
             if button then
-                task.wait(0.5)
+                task.wait(0.25)
                 local function checkUnitInfo()
                     local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
                     if not UnitInfo then return false end
@@ -673,7 +673,7 @@ if GameFinished then
 
         -- ดึงข้อมูล items ที่ได้ player.PlayerGui.UnitInfo.holder
         local AllItem = ""
-        task.wait(0.5)
+        task.wait(0.25)
         pcall(function()
             local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
             if UnitInfo then
