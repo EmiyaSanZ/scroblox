@@ -351,7 +351,7 @@ if GameFinished then
             local function clickNextButton()
                 local button = player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
                 if button then
-                    task.wait(0.25)
+                    task.wait(0.35)
                     local function checkUnitInfo()
                         local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
                         if not UnitInfo then return false end
@@ -390,7 +390,7 @@ if GameFinished then
             local startTime = tick()
             repeat
                 clickNextButton()
-                task.wait(0.25)
+                task.wait(0.35)
             until (player.PlayerGui:FindFirstChild("UnitInfo") 
                    and player.PlayerGui.UnitInfo:FindFirstChild("holder")
                    and player.PlayerGui.UnitInfo.holder:FindFirstChild("info1")
@@ -405,6 +405,9 @@ if GameFinished then
         pcall(function()
             local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
             GemGET = tonumber(GetNumberFromString(gemText)) or 0
+            if GemGET == 0 and tonumber(stats.XP) == 99999 then
+                GemGET = 102
+            end
             if GemGET > 10000 then -- ป้องกันค่าผิดปกติ
                 warn("Suspicious gem amount:", GemGET)
                 GemGET = 0
@@ -464,7 +467,7 @@ if GameFinished then
 
         -- ดึงข้อมูล items ที่ได้
         local AllItem = ""
-        task.wait(0.25) -- รอก่อน
+        task.wait(0.35) -- รอก่อน
         pcall(function()
             local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
             if UnitInfo then
@@ -604,7 +607,7 @@ if GameFinished then
         local function clickNextButton()
             local button = player.PlayerGui.ResultsUI.Holder.Buttons:FindFirstChild("Next")
             if button then
-                task.wait(0.25)
+                task.wait(0.35)
                 local function checkUnitInfo()
                     local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
                     if not UnitInfo then return false end
@@ -669,11 +672,14 @@ if GameFinished then
         pcall(function()
             local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
             GemGET = tonumber(GetNumberFromString(gemText)) or 0
+            if GemGET == 0 and tonumber(stats.XP) == 99999 then
+                GemGET = 102
+            end
         end)
 
         -- ดึงข้อมูล items ที่ได้ player.PlayerGui.UnitInfo.holder
         local AllItem = ""
-        task.wait(0.25)
+        task.wait(0.35)
         pcall(function()
             local UnitInfo = player.PlayerGui:FindFirstChild("UnitInfo")
             if UnitInfo then
