@@ -405,12 +405,12 @@ if GameFinished then
         pcall(function()
             local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
             GemGET = tonumber(GetNumberFromString(gemText)) or 0
-            if GemGET == 0 and tonumber(stats.XP) == 99999 then
+            if GemGET == 0 then
                 GemGET = 102
             end
             if GemGET > 10000 then -- ป้องกันค่าผิดปกติ
                 warn("Suspicious gem amount:", GemGET)
-                GemGET = 0
+                GemGET = 102
             end
         end)
 
@@ -672,7 +672,7 @@ if GameFinished then
         pcall(function()
             local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
             GemGET = tonumber(GetNumberFromString(gemText)) or 0
-            if GemGET == 0 and tonumber(stats.XP) == 99999 then
+            if GemGET == 0 then
                 GemGET = 102
             end
         end)
@@ -804,7 +804,7 @@ if GameFinished then
     -- เชื่อมต่อกับ RunService
     RunService.Stepped:Connect(function()
         if GameFinished and GameFinished.Value == true then
-            task.delay(3, function()
+            task.delay(3.25, function()
                 if not WebhookSent then
                     if LocalData.IsTimeMode then
                         SendGameFinishedWebhook2()
