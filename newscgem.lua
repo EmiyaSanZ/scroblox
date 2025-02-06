@@ -406,11 +406,11 @@ if GameFinished then
             local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
             GemGET = tonumber(GetNumberFromString(gemText)) or 0
             if GemGET == 0 then
-                GemGET = 102
+                GemGET = 0
             end
             if GemGET > 10000 then -- ป้องกันค่าผิดปกติ
                 warn("Suspicious gem amount:", GemGET)
-                GemGET = 102
+                GemGET = 0
             end
         end)
 
@@ -673,7 +673,7 @@ if GameFinished then
             local gemText = player.PlayerGui.ResultsUI.Holder.LevelRewards.ScrollingFrame.GemReward.Main.Amount.Text
             GemGET = tonumber(GetNumberFromString(gemText)) or 0
             if GemGET == 0 then
-                GemGET = 102
+                GemGET = 0
             end
         end)
 
