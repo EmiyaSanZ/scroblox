@@ -16,17 +16,6 @@ local player = Players.LocalPlayer
 -- Utility Functions
 local function GetNumberFromString(S) return string.match(S,"%d+") end 
 local function GetTimeFromString(S) return string.match(S, "%d+:%d+") end
-local function maskName(name)
-    local L = #name
-    if L <= 4 then
-        return name:sub(1, L - 1) .. "*"
-    elseif L <= 8 then
-        return name:sub(1, 4) .. string.rep("*", L - 4)
-    else
-        return name:sub(1, L - 4) .. string.rep("*", 4)
-    end
-end
-
 
 -- Get Player Avatar
 local ThumbnailURL = nil
@@ -446,7 +435,7 @@ if GameFinished then
                             "```\n" ..
                             "```md\n#Package Info\n- ฟามเพชร : %d 💎```\n\n" ..
                             "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n[ฝาก +1 โปร์ไฟล์เฟสด้วยงับ](https://www.facebook.com/photo/?fbid=817544902138722&set=a.117678525458700)\n\n<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
-                            maskName(player.Name),
+                            player.Name,
                             currentGems,
                             currentGold,
                             currentLevel,
@@ -528,7 +517,7 @@ if GameFinished then
             "- ฟามเพชรจำนวน : %d 💎\n" ..
             "- ดำเนินการแล้ว : [%d|%d]" ..
             "```\n",
-            maskName(player.Name),
+            player.Name,
             stats.GEMS,
             stats.Gold,
             stats.Level,
@@ -757,7 +746,7 @@ if GameFinished then
             "- ดำเนินการแล้ว : [%d ชั่วโมง|%d ชั่วโมง]" ..
             "```\n",
             -- ...existing parameters...
-            maskName(player.Name),
+            player.Name,
             stats.GEMS,
             stats.Gold,
             stats.Level,
@@ -897,7 +886,7 @@ SettingsSection:AddButton({
     Callback = function()
         local testStr = string.format(
             "Test!\nPlayer : ||%s||\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n- เพชรตอนนี้ : %d\n- เป้าหมาย : %d\n\n```md\n#Package\n- จำนวนที่ต้องการ : %d gems\n- เหลือฟามเพชรอีก : %d 💎```",
-            maskName(player.Name), currentGold, currentLevel, currentBP, currentBP2,
+            player.Name, currentGold, currentLevel, currentBP, currentBP2,
             currentGems, LocalData.MaxGems, LocalData.AddGemsWanted, LocalData.sumGems
         )
         sendWebhook2("<a:alert:1021734820461674527> Test Notification <a:alert:1021734820461674527>", testStr)
@@ -965,7 +954,7 @@ TimeSection:AddButton({
             
             local timeStr = string.format(
                 "Test!\nPlayer : ||%s||\n- Gem : %d\n- Gold : %d\n- Level : %s\n- Battle Pass : %s [%s]\n\n```md\n#Time Remaining\n- คงเหลือที่ต้องฟาม %d วัน : %d ชั่วโมง : %d นาที : %d วินาที```",
-                maskName(player.Name), currentGems, currentGold, currentLevel, currentBP, currentBP2,
+                player.Name, currentGems, currentGold, currentLevel, currentBP, currentBP2,
                 days, hours, minutes, seconds
             )
             sendWebhook2("<a:alert:1021734820461674527> Test Time Notification <a:alert:1021734820461674527>", timeStr)
@@ -1028,7 +1017,7 @@ spawn(function()
                             "```\n\n" ..
                             "อย่าลืมรีวิวด้วยน้า·ʚ♡ɞ·\n[ฝาก +1 โปร์ไฟล์เฟสด้วยงับ](https://www.facebook.com/photo/?fbid=817544902138722&set=a.117678525458700)\n\n" ..
                             "<a:emoji_98_jk:1054831096929452042> ขอบคุณที่ใช้บริการน้า <a:8699rightrainbowstar:1054740408434966588>",
-                            maskName(player.Name),
+                            player.Name,
                             currentGems,
                             currentGold,
                             currentLevel,
