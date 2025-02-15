@@ -804,7 +804,7 @@ if GameFinished then
     -- เชื่อมต่อกับ RunService
     RunService.Stepped:Connect(function()
         if GameFinished and GameFinished.Value == true then
-            task.delay(3, function()
+            task.delay(3.25, function()
                 if not WebhookSent then
                     if LocalData.IsTimeMode then
                         SendGameFinishedWebhook2()
@@ -1169,7 +1169,7 @@ end
 -- เชื่อมต่อกับ event เมื่อจบเกม
 RunService.Stepped:Connect(function()
     if GameFinished and GameFinished.Value == true then
-        task.delay(3, function()
+        task.delay(3.25, function()
             if LocalData.IsTimeMode2 then
                 SendGameFinishedWebhook2()
             end
